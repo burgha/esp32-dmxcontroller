@@ -1,6 +1,6 @@
 <template>
-    <div class="button" v-bind:class="{active: active}">
-        {{title}}
+    <div class="button" :class="{active: active}">
+        {{ title }}
     </div>
 </template>
 

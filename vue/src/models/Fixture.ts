@@ -43,7 +43,7 @@ export default class Fixture implements DMXControllable {
         if (command === undefined) {
             return false
         }
-        console.log(`changing scene of Fixture ${this.name} to ${scene.name} => DMX(${command?.channel + this._address}, ${command?.value})`);
+        console.log(`changing scene of Fixture ${this.name} to ${scene.name} => DMX(${(command.channel + this._address)}, ${command.value})`);
         return true;
     }
 
