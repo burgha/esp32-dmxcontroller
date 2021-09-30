@@ -4,7 +4,7 @@ import Scene from "./Scene";
 
 export default class Fixture implements DMXControllable {
   
-    constructor(name: string, address: number, sceneConfig: Map<Scene, DMXCommand> = new Map()) {
+    constructor(name: string, address: number, sceneConfig: Map<Scene, DMXCommand[]> = new Map()) {
         this._name = name;
         this._address = address;
         this._sceneConfig = sceneConfig;
@@ -26,24 +26,28 @@ export default class Fixture implements DMXControllable {
         this._address = v;
     }
   
-    private _sceneConfig : Map<Scene, DMXCommand>;
-    public get sceneConfig() : Map<Scene, DMXCommand> {
+    private _sceneConfig : Map<Scene, DMXCommand[]>;
+    public get sceneConfig() : Map<Scene, DMXCommand[]> {
         return this._sceneConfig;
     }
-    public set sceneConfig(v : Map<Scene, DMXCommand>) {
+    public set sceneConfig(v : Map<Scene, DMXCommand[]>) {
         this._sceneConfig = v;
     }
     
-    setSceneConfig(scene: Scene, command: DMXCommand): void {
-        this._sceneConfig.set(scene, command);
+    setSceneConfig(scene: Scene, commands: DMXCommand[]): void {
+        this._sceneConfig.set(scene, commands); 
     }
 
     activateScene(scene: Scene): boolean {
-        const command = this.sceneConfig.get(scene);
-        if (command === undefined) {
+        const commands = this.sceneConfig.get(scene);
+        if (commands === undefined) {
             return false
         }
-        console.log(`changing scene of Fixture ${this.name} to ${scene.name} => DMX(${(command.channel + this._address)}, ${command.value})`);
+        commands.forEach((command: DMXCommand) => {
+            const channel = command.channel + this.address - 1;
+            console.log(`changing scene of Fixture ${this.name} to ${scene.name} => DMX(${channel}, ${command.value})`);
+            //fetch(process.env.VUE_APP_API_URL + '/dmx?channel=' + (channel + this._address) + '&value=' + command.value); 
+        });
         return true;
     }
 

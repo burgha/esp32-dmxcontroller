@@ -6,6 +6,9 @@ module.exports = {
         output: {
             filename: 'js/[id].js',
             chunkFilename: 'js/[id].js'
+        },
+        optimization: {
+            splitChunks: false
         }
     },
     productionSourceMap: false,

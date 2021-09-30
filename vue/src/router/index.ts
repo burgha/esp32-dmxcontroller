@@ -1,6 +1,9 @@
 import Vue from 'vue'
 import VueRouter, { RouteConfig } from 'vue-router'
 import Home from '../views/Home.vue'
+import Scenes from '../views/Scenes.vue'
+import Groups from '../views/Groups.vue'
+import Fixtures from '../views/Fixtures.vue'
 
 Vue.use(VueRouter)
 
@@ -13,17 +16,17 @@ const routes: Array<RouteConfig> = [
     {
         path: '/scenes',
         name: 'Scenes',
-        component: () => import(/* webpackChunkName: "about" */ '../views/Scenes.vue')
+        component: Scenes
     },
     {
         path: '/groups',
         name: 'Groups',
-        component: () => import(/* webpackChunkName: "about" */ '../views/Groups.vue')
+        component: Groups
     },
     {
         path: '/fixtures',
         name: 'Fixtures',
-        component: () => import(/* webpackChunkName: "about" */ '../views/Fixtures.vue')
+        component: Fixtures
     }
 ]
 

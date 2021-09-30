@@ -39,17 +39,17 @@ function persistState(state: any): void {
     fixtures.forEach((fixture: any) => {
         fixture._sceneConfig = [];
         const f = state.fixtures.find((x: Fixture) => x.name === fixture._name);
-        f.sceneConfig.forEach((val: DMXCommand, key: Scene) => {
+        f.sceneConfig.forEach((val: DMXCommand[], key: Scene) => {
             fixture._sceneConfig.push({
                 _scene: key.name,
-                _command: val
+                _commands: val
             });
         });
     });
     data.fixtures = fixtures;
     data = JSON.stringify(data);
 
-    fetch('http://localhost:3000/api/settings', {
+    fetch(process.env.VUE_APP_API_URL + '/settings', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

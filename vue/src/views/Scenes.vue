@@ -1,13 +1,17 @@
 <template>
     <div class="home">
         <h1>Scenes</h1>
-        <input type="text" v-model="formScene.name">
+        <input v-model="formScene.name" type="text">
         <button @click="addOrSave()">{{ editing ? "Save" : "Add" }}</button>
         <div v-if="editing">
             <div v-for="fixture in fixtures" :key="fixture.name">
                 {{ fixture.name }}
-                <input type="text" v-model.number="fixtureSceneConfig[fixture.name][formScene.name][0]">
-                <input type="text" v-model.number="fixtureSceneConfig[fixture.name][formScene.name][1]">
+                <button @click="addCommandToFixtureSceneConfig(fixture, formScene)">Add Command</button>
+                <div v-for="command in fixtureSceneConfig[fixture.name][formScene.name]" :key="command[0] + Math.random()">
+                    <input v-model.number="command[0]" type="text">
+                    <input v-model.number="command[1]" type="text">
+                    <button @click="deleteCommandFromFixtureSceneConfig(fixture, formScene, fixtureSceneConfig[fixture.name][formScene.name].indexOf(command))">Delete Command</button>
+                </div>
             </div>
         </div>
 
@@ -50,10 +54,25 @@ export default class Scenes extends Vue {
         this.fixtures.forEach((fixture: Fixture) => {
             const obj: any = {}
             this.scenes.forEach((scene: Scene) => {
-                obj[scene.name] = [fixture.sceneConfig.get(scene)?.channel, fixture.sceneConfig.get(scene)?.value];
+                obj[scene.name] = fixture.sceneConfig.get(scene)?.map((c: DMXCommand) => {
+                    return [c.channel, c.value];
+                });
             });
             this.fixtureSceneConfig[fixture.name] = obj;
         });
+    }
+
+    addCommandToFixtureSceneConfig(fixture: Fixture, scene: Scene): void {
+        if (this.fixtureSceneConfig[fixture.name][scene.name] === undefined) {
+            this.fixtureSceneConfig[fixture.name][scene.name] = [];
+        } 
+        this.fixtureSceneConfig[fixture.name][scene.name].push([5, 5]);
+        this.$forceUpdate();
+    }
+
+    deleteCommandFromFixtureSceneConfig(fixture: Fixture, scene: Scene, index: number): void {
+        this.fixtureSceneConfig[fixture.name][scene.name].splice(index, 1);
+        this.$forceUpdate();
     }
 
     addOrSave(): void {
@@ -82,14 +101,16 @@ export default class Scenes extends Vue {
     save(): void {
         this.fixtures.forEach((fixture: Fixture) => {
             this.scenes.forEach((scene: Scene) => {
-                const dmxcommand = this.fixtureSceneConfig[fixture.name][scene.name];
-                const channel = dmxcommand[0]
-                const value = dmxcommand[1]
-                if (!Number.isInteger(channel) || !Number.isInteger(value)) {
-                    fixture.sceneConfig.delete(scene);
-                    return;
-                }
-                fixture.sceneConfig.set(scene, new DMXCommand(channel, value));
+                let dmxcommands = this.fixtureSceneConfig[fixture.name][scene.name];
+
+                dmxcommands = dmxcommands.filter((c: any[]) => {
+                    return Number.isInteger(c[0]) && Number.isInteger(c[1])
+                });
+                
+                fixture.sceneConfig.delete(scene);
+                fixture.sceneConfig.set(scene, dmxcommands.map((c: any[]) => {
+                    return new DMXCommand(c[0], c[1]);
+                }));
             });
 
         });
@@ -101,6 +122,7 @@ export default class Scenes extends Vue {
 
     remove(scene: Scene): void {
         this.scenes.splice(this.scenes.indexOf(scene), 1);
+        this.formScene = new Scene('');
         this.$store.dispatch('persistState');
     }
 }
