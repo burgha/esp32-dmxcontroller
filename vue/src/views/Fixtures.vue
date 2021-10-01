@@ -3,6 +3,7 @@
         <h1>Fixtures</h1>
         <input v-model="formFixture.name" type="text">
         <input v-model.number="formFixture.address" type="text">
+        <input v-model.number="formFixture.numChannels" type="text">
         <button @click="addOrSave()">{{editing ? "Save" : "Add"}}</button>
         <hr>
         <div v-for="fixture in fixtures" :key="fixture.name">
@@ -23,7 +24,7 @@ import Component from 'vue-class-component'
     }
 })
 export default class Fixtures extends Vue {
-    private formFixture = new Fixture("", 0);
+    private formFixture = new Fixture("", 0, 0);
     private editing = false;
 
     get fixtures(): Fixture[] {
@@ -47,7 +48,7 @@ export default class Fixtures extends Vue {
             return;
         }
         this.fixtures.push(this.formFixture);
-        this.formFixture = new Fixture("", 0);
+        this.formFixture = new Fixture("", 0, 0);
         this.$store.dispatch('persistState');
     }
 
@@ -59,7 +60,7 @@ export default class Fixtures extends Vue {
     save() {
         console.log(this.formFixture);
         this.$store.dispatch('persistState');
-        this.formFixture = new Fixture("", 0);
+        this.formFixture = new Fixture("", 0, 0);
         this.editing = false;
     }
 

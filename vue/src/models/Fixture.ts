@@ -1,12 +1,14 @@
 import DMXControllable from "./DMXControllable";
 import DMXCommand from "./DMXCommand";
 import Scene from "./Scene";
+import store from "@/store";
 
 export default class Fixture implements DMXControllable {
   
-    constructor(name: string, address: number, sceneConfig: Map<Scene, DMXCommand[]> = new Map()) {
+    constructor(name: string, address: number, numChannels: number, sceneConfig: Map<Scene, DMXCommand[]> = new Map()) {
         this._name = name;
         this._address = address;
+        this._numChannels = numChannels;
         this._sceneConfig = sceneConfig;
     }
 
@@ -26,6 +28,16 @@ export default class Fixture implements DMXControllable {
         this._address = v;
     }
   
+    
+    private _numChannels : number;
+    public get numChannels() : number {
+        return this._numChannels;
+    }
+    public set numChannels(v : number) {
+        this._numChannels = v;
+    }
+    
+
     private _sceneConfig : Map<Scene, DMXCommand[]>;
     public get sceneConfig() : Map<Scene, DMXCommand[]> {
         return this._sceneConfig;
@@ -44,11 +56,18 @@ export default class Fixture implements DMXControllable {
             return false
         }
         commands.forEach((command: DMXCommand) => {
-            const channel = command.channel + this.address - 1;
-            console.log(`changing scene of Fixture ${this.name} to ${scene.name} => DMX(${channel}, ${command.value})`);
-            //fetch(process.env.VUE_APP_API_URL + '/dmx?channel=' + (channel + this._address) + '&value=' + command.value); 
+            console.log(`changing scene of Fixture ${this.name} to ${scene.name} => DMX(${this.getAbsoluteChannel(command.channel)}, ${command.value})`);
+            store.state.dmxData[this.getAbsoluteChannel(command.channel)] = command.value;
         });
         return true;
+    }
+
+    getAbsoluteChannel(channel: number): number {
+        return channel + this.address - 1
+    }
+
+    sendDMXCommand(channel: number, value: number): void {
+        fetch(process.env.VUE_APP_API_URL + '/dmx?' + channel + '=' + value);
     }
 
 }

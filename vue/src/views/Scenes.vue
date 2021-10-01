@@ -66,7 +66,7 @@ export default class Scenes extends Vue {
         if (this.fixtureSceneConfig[fixture.name][scene.name] === undefined) {
             this.fixtureSceneConfig[fixture.name][scene.name] = [];
         } 
-        this.fixtureSceneConfig[fixture.name][scene.name].push([5, 5]);
+        this.fixtureSceneConfig[fixture.name][scene.name].push([null, null]);
         this.$forceUpdate();
     }
 

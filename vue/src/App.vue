@@ -13,6 +13,9 @@
             <router-link to="/fixtures">
                 Fixtures
             </router-link>
+            <router-link to="/debug">
+                Debug
+            </router-link>
         </div>
         <router-view />
     </div>

@@ -31,6 +31,7 @@ export default class SceneSelector extends Vue {
     changeScene(newScene: Scene): void {
         this.activeScene = newScene;
         this.target?.activateScene(newScene);
+        this.$store.dispatch('sendDMXData');
     }
 }
 </script>

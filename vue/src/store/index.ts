@@ -11,7 +11,8 @@ export default new Vuex.Store({
     state: {
         scenes: [],
         groups: [],
-        fixtures: []
+        fixtures: [],
+        dmxData: new Array(513).fill(0)
     },
     mutations: {
         setScenes(state, scenes: Scene[]) {
@@ -22,23 +23,33 @@ export default new Vuex.Store({
         },
         setFixtures(state, fixtures: Fixture[]) {
             state.fixtures = fixtures as never[];
+        },
+        setDMXData(state, {channel, value}) {
+            state.dmxData[channel] = value as never;
+            console.log(state.dmxData);
         }
     },
     actions: {
         persistState(context: any) {
-            persistState(context.state);
+            persistState(context);
+        },
+        loadSettings(context: any) {
+            loadSettings(context);
+        },
+        sendDMXData(context: any) {
+            sendDMXData(context);
         }
     },
     modules: {
     }
 })
 
-function persistState(state: any): void {
-    let data = JSON.parse(JSON.stringify(state));
+function persistState(store: any): void {
+    let data = JSON.parse(JSON.stringify(store.state));
     const fixtures = data.fixtures;
     fixtures.forEach((fixture: any) => {
         fixture._sceneConfig = [];
-        const f = state.fixtures.find((x: Fixture) => x.name === fixture._name);
+        const f = store.state.fixtures.find((x: Fixture) => x.name === fixture._name);
         f.sceneConfig.forEach((val: DMXCommand[], key: Scene) => {
             fixture._sceneConfig.push({
                 _scene: key.name,
@@ -56,4 +67,57 @@ function persistState(state: any): void {
         },
         body: data,
     })
+}
+
+function loadSettings(store: any): void {
+    fetch(process.env.VUE_APP_API_URL + "/settings").then(res => {
+        res.json().then(data => {
+            const scenes: Scene[] = [];
+            data.scenes?.forEach((e: any) => {
+                scenes.push(new Scene(e._name));
+            });
+            store.commit('setScenes', scenes);
+
+            const fixtures: Fixture[] = [];
+            data.fixtures?.forEach((e: any) => {
+                const sceneConfig: Map<Scene, DMXCommand[]> = new Map();
+                e._sceneConfig.forEach((c: any) => {
+                    const scene = store.state.scenes.find((s: Scene) => s.name === c._scene);
+                    if (scene === undefined) {
+                        return;
+                    }
+                    const commands: DMXCommand[] = [];
+                    c._commands.forEach((command: any) => {
+                        commands.push(new DMXCommand(command._channel, command._value));
+                    });
+                    sceneConfig.set(scene, commands);
+                });
+                fixtures.push(new Fixture(e._name, e._address, e._numChannels, sceneConfig));
+            });
+            store.commit('setFixtures', fixtures);
+
+            const groups: Group[] = [];
+            data.groups?.forEach((e: any) => {
+                const members: Fixture[] = [];
+                e._members.forEach((m: any) => {
+                    const fixture = store.state.fixtures.find((f: Fixture) => f.name === m._name);
+                    if (fixture === undefined) {
+                        return;
+                    }
+                    members.push(fixture);
+                });
+                groups.push(new Group(e._name, members));
+            });
+            store.commit('setGroups', groups);
+        })
+    });
+}
+
+function sendDMXData(store: any) {
+    let query = "";
+    store.state.dmxData.forEach((value: number, channel: number) => {
+        query += channel + "=" + value + "&";
+    });
+    query = query.substring(0, query.length - 1); // remove last &
+    fetch(process.env.VUE_APP_API_URL + '/dmx?' + channel + '=' + value);
 }

@@ -4,6 +4,7 @@ import Home from '../views/Home.vue'
 import Scenes from '../views/Scenes.vue'
 import Groups from '../views/Groups.vue'
 import Fixtures from '../views/Fixtures.vue'
+import Debug from '../views/Debug.vue'
 
 Vue.use(VueRouter)
 
@@ -27,6 +28,11 @@ const routes: Array<RouteConfig> = [
         path: '/fixtures',
         name: 'Fixtures',
         component: Fixtures
+    },
+    {
+        path: '/debug',
+        name: 'Debug',
+        component: Debug
     }
 ]
 
