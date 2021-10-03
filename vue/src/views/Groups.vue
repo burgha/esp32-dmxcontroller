@@ -1,15 +1,38 @@
 <template>
-    <div class="home">
+    <div class="groups">
         <h1>Groups</h1>
-        <input type="text" v-model="formGroup.name">
-        <button @click="addOrSave()">{{editing ? "Save" : "Add"}}</button>
-        <hr>
+        <v-sheet class="ma-4 pa-4" elevation="2">
+            <v-container>
+                <v-row>
+                    <v-col cols="12" md="10">
+                        <v-text-field v-model="formGroup.name" placeholder="Name" />
+                    </v-col>
+                    <v-col cols="12" md="2">
+                        <v-btn v-if="!editing" @click="add()">Add</v-btn>
+                        <v-btn v-if="editing" @click="save()">Save</v-btn>
+                    </v-col>
+                </v-row>
+            </v-container>
+        </v-sheet>
+
         <div v-for="group in groups" :key="group.name">
-            {{group.name}} <span @click="edit(group)">E</span>    <span @click="remove(group)">X</span>
-            <div v-for="fixture in fixtures" :key="fixture.name">
-                <label :for="fixture.name">{{fixture.name}}</label>
-                <input type="checkbox" :name="fixture.name" @click="toggleMembership(group, fixture)" :checked="isFixtureInGroup(group, fixture)">
-            </div>
+            <p class="text-h6">{{ group.name }}</p>
+            <v-btn class="ma-2" @click="edit(group)">Edit</v-btn>
+            <v-btn class="ma-2" @click="remove(group)">Delete</v-btn>
+            <v-container>
+                <p>Members:</p>
+                <v-row v-for="fixture in fixtures" :key="fixture.name" justify="center">
+                    <v-col cols="4">
+                        <v-checkbox
+                            class="align-center justify-center"
+                            :input-value="isFixtureInGroup(group, fixture)"
+                            :label="fixture.name"
+                            @click="toggleMembership(group, fixture)"
+                        />
+                    </v-col>
+                </v-row>
+                <v-divider v-if="groups.indexOf(group) < groups.length - 1" />
+            </v-container>
         </div>
     </div>
 </template>

@@ -1,23 +1,47 @@
 <template>
-    <div class="home">
+    <div class="scenes">
         <h1>Scenes</h1>
-        <input v-model="formScene.name" type="text">
-        <button @click="addOrSave()">{{ editing ? "Save" : "Add" }}</button>
-        <div v-if="editing">
-            <div v-for="fixture in fixtures" :key="fixture.name">
-                {{ fixture.name }}
-                <button @click="addCommandToFixtureSceneConfig(fixture, formScene)">Add Command</button>
-                <div v-for="command in fixtureSceneConfig[fixture.name][formScene.name]" :key="command[0] + Math.random()">
-                    <input v-model.number="command[0]" type="text">
-                    <input v-model.number="command[1]" type="text">
-                    <button @click="deleteCommandFromFixtureSceneConfig(fixture, formScene, fixtureSceneConfig[fixture.name][formScene.name].indexOf(command))">Delete Command</button>
+        <v-sheet class="ma-4 pa-4" elevation="2">
+            <v-container>
+                <v-row justify="space-between">
+                    <v-col cols="12" md="10">
+                        <v-text-field v-model="formScene.name" placeholder="Name" />
+                    </v-col>
+                    <v-col cols="12" sm="2">
+                        <v-btn v-if="!editing" @click="add()">Add</v-btn>
+                        <v-btn v-if="editing" @click="save()">Save</v-btn>
+                    </v-col>
+                </v-row>
+            </v-container>
+
+            <div v-if="editing">
+                <div v-for="fixture in fixtures" :key="fixture.name">
+                    {{ fixture.name }}
+                    <v-container>
+                        <v-row v-for="command in fixtureSceneConfig[fixture.name][formScene.name]" :key="command[0] + Math.random()">
+                            <v-col cols="4">
+                                <v-text-field v-model.number="command[0]" placeholder="Address" />
+                            </v-col>
+                            <v-col cols="4">
+                                <v-text-field v-model.number="command[1]" placeholder="Value" />
+                            </v-col>
+                            <v-col cols="4">
+                                <v-btn @click="deleteCommandFromFixtureSceneConfig(fixture, formScene, fixtureSceneConfig[fixture.name][formScene.name].indexOf(command))">
+                                    Delete Command
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                    <v-btn @click="addCommandToFixtureSceneConfig(fixture, formScene)">Add Command</v-btn>
                 </div>
             </div>
-        </div>
+        </v-sheet>
 
-        <hr>
-        <div v-for="scene in scenes" :key="scene.name">
-            {{ scene.name }} <span @click="edit(scene)">E</span>    <span @click="remove(scene)">X</span>
+        <div v-for="scene in scenes" :key="scene.name" class="ma-2">
+            {{ scene.name }}
+            <v-btn class="ma-2" @click="edit(scene)">Edit</v-btn>
+            <v-btn class="ma-2" @click="remove(scene)">Delete</v-btn>
+            <v-divider v-if="scenes.indexOf(scene) < scenes.length - 1" />
         </div>
     </div>
 </template>
@@ -75,14 +99,6 @@ export default class Scenes extends Vue {
         this.$forceUpdate();
     }
 
-    addOrSave(): void {
-        if (this.editing) {
-            this.save();
-        } else {
-            this.add();
-        }
-    }
-
     add(): void {
         if (this.formScene.name === '') {
             return;
@@ -101,7 +117,7 @@ export default class Scenes extends Vue {
     save(): void {
         this.fixtures.forEach((fixture: Fixture) => {
             this.scenes.forEach((scene: Scene) => {
-                let dmxcommands = this.fixtureSceneConfig[fixture.name][scene.name];
+                let dmxcommands = this.fixtureSceneConfig[fixture.name][scene.name] ?? [];
 
                 dmxcommands = dmxcommands.filter((c: any[]) => {
                     return Number.isInteger(c[0]) && Number.isInteger(c[1])

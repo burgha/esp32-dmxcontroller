@@ -12,7 +12,8 @@ export default new Vuex.Store({
         scenes: [],
         groups: [],
         fixtures: [],
-        dmxData: new Array(513).fill(0)
+        dmxData: new Array(513).fill(0),
+        dmxEnabled: true
     },
     mutations: {
         setScenes(state, scenes: Scene[]) {
@@ -26,7 +27,14 @@ export default new Vuex.Store({
         },
         setDMXData(state, {channel, value}) {
             state.dmxData[channel] = value as never;
-            console.log(state.dmxData);
+        },
+        setDMXEnabled(state, value: boolean) {
+            state.dmxEnabled = value as never;
+            if (value) {
+                fetch(process.env.VUE_APP_API_URL + '/enable', {method: "POST"});
+            } else {
+                fetch(process.env.VUE_APP_API_URL + '/disable', {method: "POST"});
+            }
         }
     },
     actions: {
@@ -45,7 +53,12 @@ export default new Vuex.Store({
 })
 
 function persistState(store: any): void {
-    let data = JSON.parse(JSON.stringify(store.state));
+    let data = {
+        scenes: store.state.scenes,
+        groups: store.state.groups,
+        fixtures: store.state.fixtures
+    }
+    data = JSON.parse(JSON.stringify(data));
     const fixtures = data.fixtures;
     fixtures.forEach((fixture: any) => {
         fixture._sceneConfig = [];
@@ -58,14 +71,15 @@ function persistState(store: any): void {
         });
     });
     data.fixtures = fixtures;
-    data = JSON.stringify(data);
+    
+    const body = JSON.stringify(data);
 
     fetch(process.env.VUE_APP_API_URL + '/settings', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: data,
+        body: body,
     })
 }
 
@@ -109,6 +123,10 @@ function loadSettings(store: any): void {
                 groups.push(new Group(e._name, members));
             });
             store.commit('setGroups', groups);
+
+            // data.dmxData.forEach((value: number, index: number) => {
+            //     store.commit('setDMXData', {channel: index, value: value});
+            // });
         })
     });
 }
@@ -119,5 +137,5 @@ function sendDMXData(store: any) {
         query += channel + "=" + value + "&";
     });
     query = query.substring(0, query.length - 1); // remove last &
-    fetch(process.env.VUE_APP_API_URL + '/dmx?' + channel + '=' + value);
+    fetch(process.env.VUE_APP_API_URL + '/dmx?' + query, {method: "POST"});
 }

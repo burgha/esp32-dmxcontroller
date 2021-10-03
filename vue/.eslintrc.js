@@ -14,6 +14,8 @@ module.exports = {
                 "max": 1,
                 "allowFirstLine": false
             }
-        }]
+        }],
+        "vue/singleline-html-element-content-newline": "off",
+        "no-undef": "off"
     }
 }

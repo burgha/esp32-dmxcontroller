@@ -63,11 +63,11 @@ export default class Fixture implements DMXControllable {
     }
 
     getAbsoluteChannel(channel: number): number {
-        return channel + this.address - 1
+        return Number(channel) + Number(this.address) - 1
     }
 
     sendDMXCommand(channel: number, value: number): void {
-        fetch(process.env.VUE_APP_API_URL + '/dmx?' + channel + '=' + value);
+        fetch(process.env.VUE_APP_API_URL + '/dmx?' + channel + '=' + value, {method: "POST"});
     }
 
 }

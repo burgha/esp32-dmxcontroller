@@ -2,6 +2,7 @@ module.exports = {
     css: {
         extract: false
     },
+
     configureWebpack: {
         output: {
             filename: 'js/[id].js',
@@ -11,6 +12,11 @@ module.exports = {
             splitChunks: false
         }
     },
+
     productionSourceMap: false,
-    filenameHashing: false
+    filenameHashing: false,
+
+    transpileDependencies: [
+        'vuetify'
+    ]
 }
