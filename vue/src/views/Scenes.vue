@@ -70,10 +70,6 @@ export default class Scenes extends Vue {
         return this.$store.state.fixtures; 
     }
 
-    mounted(): void {
-        this.generateFixtureSceneConfig();
-    }
-
     generateFixtureSceneConfig() {
         this.fixtures.forEach((fixture: Fixture) => {
             const obj: any = {}
@@ -110,6 +106,7 @@ export default class Scenes extends Vue {
     }
 
     edit(scene: Scene): void {
+        this.generateFixtureSceneConfig();
         this.formScene = scene;
         this.editing = true;
     }
