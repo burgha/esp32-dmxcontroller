@@ -2,27 +2,31 @@
     <div class="debug">
         <h1>Debug</h1>
 
-        <h2>Manual DMX Commands</h2>
-        <v-select
-            v-model="selectedFixture"
-            :items="fixtures"
-            item-text="name"
-            :return-object="true"
-            label="Fixture"
-            class="ma-2"
-            outlined
-        />
-
-        <div v-if="selectedFixture" class="faderlist d-flex justify-center">
-            <div v-for="index in selectedFixture.numChannels" :key="index" class="fader">
-                {{ index }}
-                <v-slider v-model="dmxData[selectedFixture.getAbsoluteChannel(index)]" vertical min="0" max="255" class="ma-8" @change="changeDMXValue(index, $event)" />
-                {{ dmxData[selectedFixture.getAbsoluteChannel(index)] }}
+        <v-sheet class="ma-4 pa-4" elevation="2">
+            <h2>Manual DMX Commands</h2>
+            <v-select
+                v-model="selectedFixture"
+                :items="fixtures"
+                item-text="name"
+                :return-object="true"
+                label="Fixture"
+                class="ma-2"
+                outlined
+            />
+            <div v-if="selectedFixture" class="faderlist d-flex justify-center">
+                <div v-for="index in selectedFixture.numChannels" :key="index" class="fader">
+                    {{ index }}
+                    <v-slider v-model="dmxData[selectedFixture.getAbsoluteChannel(index)]" vertical min="0" max="255" class="ma-8" @change="changeDMXValue(index, $event)" />
+                    {{ dmxData[selectedFixture.getAbsoluteChannel(index)] }}
+                </div>
             </div>
-        </div>
+        </v-sheet>
 
-        <h2>Device</h2>
-        <v-btn @click="resetSettings()">Reset Settings</v-btn>
+        <v-sheet class="ma-4 pa-4" elevation="2">
+            <h2>Device</h2>
+            <v-btn class="ma-2" @click="resetSettings()">Reset Settings</v-btn>
+            <v-btn class="ma-2" @click="reboot()">Reboot</v-btn>
+        </v-sheet>
     </div>
 </template>
 
@@ -46,6 +50,10 @@ export default class Debug extends Vue {
         return this.$store.state.dmxData; 
     }
 
+    mounted() {
+        this.$store.dispatch('getDMXData');
+    }
+
     changeDMXValue(channel: number, value: string | number): void {
         if (this.selectedFixture === null) {
             return;
@@ -56,6 +64,10 @@ export default class Debug extends Vue {
 
     resetSettings(): void {
         fetch(process.env.VUE_APP_API_URL + '/clearSettings', {method: "POST"});
+    }
+
+    reboot(): void {
+        fetch(process.env.VUE_APP_API_URL + '/reboot', {method: "POST"});
     }
 }
 </script>

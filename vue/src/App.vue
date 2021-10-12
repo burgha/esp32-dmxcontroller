@@ -2,22 +2,15 @@
     <v-app>
         <v-main>
             <router-view />
+            <div style="height: 60px; width: 100%" />
         </v-main>
         <v-bottom-navigation id="nav">
             <v-btn x-large to="/">
                 <span>Home</span>
                 <v-icon>mdi-home</v-icon>
             </v-btn>
-            <v-btn x-large to="/scenes">
-                <span>Scenes</span>
-                <v-icon>mdi-cog</v-icon>
-            </v-btn>
-            <v-btn x-large to="/groups">
-                <span>Groups</span>
-                <v-icon>mdi-cog</v-icon>
-            </v-btn>
-            <v-btn x-large to="/fixtures">
-                <span>Fixtures</span>
+            <v-btn x-large to="/settings">
+                <span>Settings</span>
                 <v-icon>mdi-cog</v-icon>
             </v-btn>
             <v-btn x-large to="/debug">
@@ -39,6 +32,14 @@
 
 #nav {
     position: fixed;
+    overflow-x: scroll;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#nav::-webkit-scrollbar {
+    display: none;
 }
 
 #nav a.router-link-exact-active {

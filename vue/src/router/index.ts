@@ -1,9 +1,10 @@
 import Vue from 'vue'
 import VueRouter, { RouteConfig } from 'vue-router'
 import Home from '../views/Home.vue'
-import Scenes from '../views/Scenes.vue'
-import Groups from '../views/Groups.vue'
-import Fixtures from '../views/Fixtures.vue'
+import Scenes from '../components/Scenes.vue'
+import Groups from '../components/Groups.vue'
+import Fixtures from '../components/Fixtures.vue'
+import Settings from '../views/Settings.vue'
 import Debug from '../views/Debug.vue'
 import store from '../store'
 
@@ -20,31 +21,13 @@ const routes: Array<RouteConfig> = [
         component: Home
     },
     {
-        path: '/scenes',
-        name: 'Scenes',
+        path: '/settings',
+        name: 'Settings',
         beforeEnter: (to, from, next) => {
             store.commit('setDMXEnabled', false);
             next();
         },
-        component: Scenes
-    },
-    {
-        path: '/groups',
-        name: 'Groups',
-        beforeEnter: (to, from, next) => {
-            store.commit('setDMXEnabled', false);
-            next();
-        },
-        component: Groups
-    },
-    {
-        path: '/fixtures',
-        name: 'Fixtures',
-        beforeEnter: (to, from, next) => {
-            store.commit('setDMXEnabled', false);
-            next();
-        },
-        component: Fixtures
+        component: Settings
     },
     {
         path: '/debug',

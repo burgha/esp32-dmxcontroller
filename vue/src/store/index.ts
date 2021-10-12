@@ -2,8 +2,10 @@ import DMXCommand from '@/models/DMXCommand'
 import Fixture from '@/models/Fixture'
 import Group from '@/models/Group'
 import Scene from '@/models/Scene'
+import Config from '@/models/Config'
 import Vue from 'vue'
 import Vuex from 'vuex'
+import WifiCredentials from '@/models/WifiCredentials'
 
 Vue.use(Vuex)
 
@@ -12,6 +14,7 @@ export default new Vuex.Store({
         scenes: [],
         groups: [],
         fixtures: [],
+        config: new Config(),
         dmxData: new Array(513).fill(0),
         dmxEnabled: true
     },
@@ -24,6 +27,9 @@ export default new Vuex.Store({
         },
         setFixtures(state, fixtures: Fixture[]) {
             state.fixtures = fixtures as never[];
+        },
+        setConfig(state, config: Config) {
+            state.config = config as never;
         },
         setDMXData(state, {channel, value}) {
             state.dmxData[channel] = value as never;
@@ -46,6 +52,9 @@ export default new Vuex.Store({
         },
         sendDMXData(context: any) {
             sendDMXData(context);
+        },
+        getDMXData(context: any) {
+            getDMXData(context);
         }
     },
     modules: {
@@ -56,9 +65,11 @@ function persistState(store: any): void {
     let data = {
         scenes: store.state.scenes,
         groups: store.state.groups,
-        fixtures: store.state.fixtures
+        fixtures: store.state.fixtures,
+        config: store.state.config
     }
     data = JSON.parse(JSON.stringify(data));
+
     const fixtures = data.fixtures;
     fixtures.forEach((fixture: any) => {
         fixture._sceneConfig = [];
@@ -124,9 +135,9 @@ function loadSettings(store: any): void {
             });
             store.commit('setGroups', groups);
 
-            // data.dmxData.forEach((value: number, index: number) => {
-            //     store.commit('setDMXData', {channel: index, value: value});
-            // });
+            const config = new Config();
+            config.wifiCredentials = new WifiCredentials(data.config._wifiCredentials._ssid, data.config._wifiCredentials._password);
+            store.commit('setConfig', config);
         })
     });
 }
@@ -138,4 +149,12 @@ function sendDMXData(store: any) {
     });
     query = query.substring(0, query.length - 1); // remove last &
     fetch(process.env.VUE_APP_API_URL + '/dmx?' + query, {method: "POST"});
+}
+
+function getDMXData(store: any) {
+    fetch(process.env.VUE_APP_API_URL + "/dmx").then(res => res.json()).then(d => {
+        d.forEach((value: number, index: number) => {
+            store.commit('setDMXData', {channel: index, value: value});
+        });
+    });
 }

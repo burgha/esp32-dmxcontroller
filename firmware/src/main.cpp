@@ -5,6 +5,7 @@
 #include <ESPAsyncWebServer.h>
 #include <wifi_credentials.h>
 #include <esp_dmx.h>
+#include <ArduinoJson.h>
 
 int transmitPin = 23;
 int receivePin = 22;
@@ -27,6 +28,62 @@ unsigned long previousTime = 0;
 // Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
 
+void createWifi() {
+  Serial.println("Creating WiFi Network");
+  WiFi.softAP("ESP32-DMX");
+}
+
+void connectWifi(String ssid, String password) {
+  // Connect to Wi-Fi network with SSID and password
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid.c_str(), password.c_str());
+  int tries = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    if (tries == 50) {
+      WiFi.disconnect();
+      createWifi();
+      return;
+    }
+    delay(500);
+    Serial.print(".");
+    tries++;
+  }
+   
+  // Print local IP address and start web server
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void initWifi() {
+  // Debug
+  if (false) {
+    WiFi.begin(wifi_ssid, wifi_password);
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+    }
+    return;
+  }
+
+  if (SPIFFS.exists("/settings.json")) {
+    File file = SPIFFS.open("/settings.json", "r");
+    String json = file.readString();
+    file.close();
+
+    DynamicJsonDocument doc(1024);
+    deserializeJson(doc, json);
+
+    String ssid = doc["config"]["_wifiCredentials"]["_ssid"].as<String>();
+    String password = doc["config"]["_wifiCredentials"]["_password"].as<String>();
+
+    connectWifi(ssid, password);
+  } else {
+    createWifi();
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -44,19 +101,7 @@ void setup() {
   dmx_driver_install(dmxPort, DMX_MAX_PACKET_SIZE, 10, &dmx_queue, ESP_INTR_FLAG_IRAM);
   dmx_set_mode(dmxPort, DMX_MODE_TX);
 
-  // Connect to Wi-Fi network with SSID and password
-  Serial.print("Connecting to ");
-  Serial.println(wifi_ssid);
-  WiFi.begin(wifi_ssid, wifi_password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  // Print local IP address and start web server
-  Serial.println("");
-  Serial.println("WiFi connected.");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+  initWifi();
 
   server.on("/api/settings", HTTP_GET, [](AsyncWebServerRequest *request){
     Serial.println("-> Settings");
@@ -71,6 +116,8 @@ void setup() {
 
   server.on("/api/settings", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
     Serial.println("<- Settings");
+    bool lockBefore = dmxManualLock;
+    dmxManualLock = true;
     delay(100);
 
     if (data[0] != 123) {
@@ -91,6 +138,7 @@ void setup() {
     Serial.println();
     request->send(200);
     delay(100);
+    dmxManualLock = lockBefore;
   });
 
   server.on("/api/enable", HTTP_POST, [](AsyncWebServerRequest *request){
@@ -103,6 +151,25 @@ void setup() {
     Serial.println("Disabling DMX");
     dmxManualLock = true;
     request->send(200);
+  });
+
+  server.on("/api/dmx", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->hasParam("channel")) {
+      AsyncWebParameter* p = request->getParam("channel");
+      int index = p->value().toInt();
+      request->send(200, "text/plain", String(dmxData[index]));
+    } else {
+      int size = sizeof(dmxData);
+      String s = "[";
+      for(int i = 0; i < size - 2; i++ )
+      {
+        s += String(dmxData[i]);
+        s += ",";
+      }
+      s += String(dmxData[size - 1]);
+      s+= "]";
+      request->send(200, "application/json", s);
+    }
   });
 
   server.on("/api/dmx", HTTP_POST, [](AsyncWebServerRequest *request){
@@ -128,6 +195,12 @@ void setup() {
     Serial.println("Clearing Settings");
     SPIFFS.remove("/settings.json");
     request->send(200);
+  });
+
+  server.on("/api/reboot", HTTP_POST, [](AsyncWebServerRequest *request){
+    Serial.println("Rebooting");
+    request->send(200);
+    ESP.restart();
   });
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");

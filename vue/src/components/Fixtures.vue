@@ -1,7 +1,7 @@
 <template>
     <div class="fixtures">
-        <h1>Fixtures</h1>
         <v-sheet class="ma-4 pa-4" elevation="2">
+            <h2>Fixtures</h2>
             <v-container>
                 <v-row>
                     <v-col cols="12" md="10">

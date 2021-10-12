@@ -1,7 +1,7 @@
 <template>
     <div class="scenes">
-        <h1>Scenes</h1>
         <v-sheet class="ma-4 pa-4" elevation="2">
+            <h2>Scenes</h2>
             <v-container>
                 <v-row justify="space-between">
                     <v-col cols="12" md="10">
