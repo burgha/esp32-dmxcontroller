@@ -1,15 +1,17 @@
 import DMXControllable from "./DMXControllable";
 import DMXCommand from "./DMXCommand";
 import Scene from "./Scene";
+import FixtureControl from "./FixtureControl";
 import store from "@/store";
 
 export default class Fixture implements DMXControllable {
   
-    constructor(name: string, address: number, numChannels: number, sceneConfig: Map<Scene, DMXCommand[]> = new Map()) {
+    constructor(name: string, address: number, numChannels: number, sceneConfig: Map<Scene, DMXCommand[]> = new Map(), controls: FixtureControl[] = []) {
         this._name = name;
         this._address = address;
         this._numChannels = numChannels;
         this._sceneConfig = sceneConfig;
+        this._controls = controls;
     }
 
     private _name : string;
@@ -27,7 +29,6 @@ export default class Fixture implements DMXControllable {
     public set address(v : number) {
         this._address = v;
     }
-  
     
     private _numChannels : number;
     public get numChannels() : number {
@@ -36,7 +37,6 @@ export default class Fixture implements DMXControllable {
     public set numChannels(v : number) {
         this._numChannels = v;
     }
-    
 
     private _sceneConfig : Map<Scene, DMXCommand[]>;
     public get sceneConfig() : Map<Scene, DMXCommand[]> {
@@ -46,28 +46,41 @@ export default class Fixture implements DMXControllable {
         this._sceneConfig = v;
     }
     
-    setSceneConfig(scene: Scene, commands: DMXCommand[]): void {
+    private _controls : FixtureControl[];
+    public get controls() : FixtureControl[] {
+        return this._controls;
+    }
+    public set controls(v : FixtureControl[]) {
+        this._controls = v;
+    }
+    
+    public setSceneConfig(scene: Scene, commands: DMXCommand[]): void {
         this._sceneConfig.set(scene, commands); 
     }
 
-    activateScene(scene: Scene): boolean {
+    public activateScene(scene: Scene): boolean {
         const commands = this.sceneConfig.get(scene);
         if (commands === undefined) {
             return false
         }
         commands.forEach((command: DMXCommand) => {
             console.log(`changing scene of Fixture ${this.name} to ${scene.name} => DMX(${this.getAbsoluteChannel(command.channel)}, ${command.value})`);
-            store.state.dmxData[this.getAbsoluteChannel(command.channel)] = command.value;
+            this.applyDMXCommand(command);
         });
         return true;
     }
 
-    getAbsoluteChannel(channel: number): number {
+    public activateCommands(commands: DMXCommand[]): void {
+        commands.forEach((command: DMXCommand) => {
+            this.applyDMXCommand(command);
+        });
+    }
+
+    public getAbsoluteChannel(channel: number): number {
         return Number(channel) + Number(this.address) - 1
     }
 
-    sendDMXCommand(channel: number, value: number): void {
-        fetch(process.env.VUE_APP_API_URL + '/dmx?' + channel + '=' + value, {method: "POST"});
+    public applyDMXCommand(command: DMXCommand) {
+        store.state.dmxData[this.getAbsoluteChannel(command.channel)] = command.value;
     }
-
 }

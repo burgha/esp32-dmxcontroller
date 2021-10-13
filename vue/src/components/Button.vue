@@ -1,7 +1,7 @@
 <template>
-    <div class="button" :class="{active: active}">
+    <v-sheet class="ma-4 pa-4 rounded-lg" elevation="2" :color="active ? 'blue' : 'white'" style="width: 150px; height: 150px">
         {{ title }}
-    </div>
+    </v-sheet>
 </template>
 
 <script lang="ts">

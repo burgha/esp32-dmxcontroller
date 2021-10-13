@@ -1,3 +1,4 @@
+import DMXCommand from "./DMXCommand";
 import DMXControllable from "./DMXControllable";
 import Fixture from "./Fixture";
 import Scene from "./Scene";
@@ -25,10 +26,17 @@ export default class Group implements DMXControllable {
         this._members = v;
     }
     
-    activateScene(scene: Scene): void {
+    public activateScene(scene: Scene): void {
         this._members.forEach((fixture: Fixture) => {
             fixture.activateScene(scene);
         });
     }
 
+    public activateCommands(commands: DMXCommand[]): void {
+        this._members.forEach((fixture: Fixture) => {
+            commands.forEach((command: DMXCommand) => {
+                fixture.applyDMXCommand(command);
+            });
+        });
+    }
 }

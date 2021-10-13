@@ -11,5 +11,4 @@ export default class Scene {
     public set name(v : string) {
         this._name = v;
     }
-    
 }

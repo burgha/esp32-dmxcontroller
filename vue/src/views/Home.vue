@@ -13,9 +13,9 @@
             v-for="group in groups" 
             :key="group.name"
             elevation="2"
-            class="ma-4"
+            class="ma-4 pa-4"
         >
-            <p>{{ group.name }}</p>
+            <h3>{{ group.name }}</h3>
             <p>Members: {{ group.members.map(x => x.name).join(', ') }}</p>
             <SceneSelector :target="group" :scenes="scenes" />
         </v-card>

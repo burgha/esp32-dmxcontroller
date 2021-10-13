@@ -6,6 +6,7 @@ import Config from '@/models/Config'
 import Vue from 'vue'
 import Vuex from 'vuex'
 import WifiCredentials from '@/models/WifiCredentials'
+import FixtureControl from '@/models/FixtureControl'
 
 Vue.use(Vuex)
 
@@ -61,19 +62,18 @@ export default new Vuex.Store({
     }
 })
 
-function persistState(store: any): void {
+async function persistState(store: any) {
     let data = {
-        scenes: store.state.scenes,
-        groups: store.state.groups,
-        fixtures: store.state.fixtures,
-        config: store.state.config
+        scenes: await store.state.scenes,
+        groups: await store.state.groups,
+        fixtures: await store.state.fixtures,
+        config: await store.state.config
     }
     data = JSON.parse(JSON.stringify(data));
-
     const fixtures = data.fixtures;
-    fixtures.forEach((fixture: any) => {
+    fixtures.forEach(async(fixture: any) => {
         fixture._sceneConfig = [];
-        const f = store.state.fixtures.find((x: Fixture) => x.name === fixture._name);
+        const f = await store.state.fixtures.find((x: Fixture) => x.name === fixture._name);
         f.sceneConfig.forEach((val: DMXCommand[], key: Scene) => {
             fixture._sceneConfig.push({
                 _scene: key.name,
@@ -82,7 +82,6 @@ function persistState(store: any): void {
         });
     });
     data.fixtures = fixtures;
-    
     const body = JSON.stringify(data);
 
     fetch(process.env.VUE_APP_API_URL + '/settings', {
@@ -117,7 +116,11 @@ function loadSettings(store: any): void {
                     });
                     sceneConfig.set(scene, commands);
                 });
-                fixtures.push(new Fixture(e._name, e._address, e._numChannels, sceneConfig));
+                const controls: FixtureControl[] = [];
+                e._controls.forEach((control: any) => {
+                    controls.push(new FixtureControl(control._name, control._type, control._config));
+                });
+                fixtures.push(new Fixture(e._name, e._address, e._numChannels, sceneConfig, controls));
             });
             store.commit('setFixtures', fixtures);
 

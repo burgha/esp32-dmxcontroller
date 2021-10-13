@@ -31,6 +31,7 @@
 </template>
 
 <script lang="ts">
+import DMXCommand from '@/models/DMXCommand';
 import Fixture from '@/models/Fixture';
 import Vue from 'vue'
 import Component from 'vue-class-component'
@@ -58,7 +59,8 @@ export default class Debug extends Vue {
         if (this.selectedFixture === null) {
             return;
         }
-        this.selectedFixture.sendDMXCommand(this.selectedFixture.getAbsoluteChannel(channel), typeof value === 'string' ? parseInt(value) : value);
+        value = typeof value === 'string' ? parseInt(value) : value
+        this.selectedFixture.applyDMXCommand(new DMXCommand(channel, value));
         this.$store.dispatch('persistState');
     }
 
