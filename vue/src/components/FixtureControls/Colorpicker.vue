@@ -19,17 +19,21 @@ import DMXCommand from '@/models/DMXCommand';
 export default class ColorpickerFixtureControl extends Vue {
     @Prop(Fixture) fixture: Fixture | undefined
     @Prop(Array) channels: number[] | undefined;
-
+    
     private changeLock = true;
+    private color: object | null = null;
+    
     mounted() {
         this.changeLock = false;
     }
 
     onUpdateColor(val: any): void {
-        // Todo: limit send rate or else esp crashes
+        this.color = val;
         if (this.channels === undefined || this.fixture === undefined || this.changeLock) {
             return;
         }
+        this.changeLock = true;
+        setTimeout(() => {this.changeLock = false}, 1000);
         this.fixture.activateCommands([
             new DMXCommand(this.fixture.getAbsoluteChannel(this.channels[0]), val.rgba.r),
             new DMXCommand(this.fixture.getAbsoluteChannel(this.channels[1]), val.rgba.g),

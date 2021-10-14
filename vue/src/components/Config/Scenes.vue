@@ -2,17 +2,7 @@
     <div class="scenes">
         <v-sheet class="ma-4 pa-4" elevation="2">
             <h2>Scenes</h2>
-            <v-container>
-                <v-row justify="space-between">
-                    <v-col cols="12" md="10">
-                        <v-text-field v-model="formScene.name" placeholder="Name" />
-                    </v-col>
-                    <v-col cols="12" sm="2">
-                        <v-btn v-if="!editing" @click="add()">Add</v-btn>
-                        <v-btn v-if="editing" @click="save()">Save</v-btn>
-                    </v-col>
-                </v-row>
-            </v-container>
+            <v-text-field v-model="formScene.name" placeholder="Name" />
 
             <div v-if="editing">
                 <div v-for="fixture in fixtures" :key="fixture.name">
@@ -35,6 +25,8 @@
                     <v-btn @click="addCommandToFixtureSceneConfig(fixture, formScene)">Add Command</v-btn>
                 </div>
             </div>
+            <v-btn v-if="!editing" class="ma-4" @click="add()">Add</v-btn>
+            <v-btn v-if="editing" class="ma-4" @click="save()">Save</v-btn>
         </v-sheet>
 
         <div v-for="scene in scenes" :key="scene.name" class="ma-2">

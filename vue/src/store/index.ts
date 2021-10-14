@@ -7,6 +7,7 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import WifiCredentials from '@/models/WifiCredentials'
 import FixtureControl from '@/models/FixtureControl'
+import DMXControllable from '@/models/DMXControllable'
 
 Vue.use(Vuex)
 
@@ -17,7 +18,8 @@ export default new Vuex.Store({
         fixtures: [],
         config: new Config(),
         dmxData: new Array(513).fill(0),
-        dmxEnabled: true
+        dmxEnabled: true,
+        activeScene: new Map<DMXControllable, Scene>()
     },
     mutations: {
         setScenes(state, scenes: Scene[]) {
@@ -42,6 +44,9 @@ export default new Vuex.Store({
             } else {
                 fetch(process.env.VUE_APP_API_URL + '/disable', {method: "POST"});
             }
+        },
+        setActiveScene(state, {target, scene}) {
+            state.activeScene.set(target as DMXControllable, scene as Scene);
         }
     },
     actions: {
@@ -71,9 +76,9 @@ async function persistState(store: any) {
     }
     data = JSON.parse(JSON.stringify(data));
     const fixtures = data.fixtures;
-    fixtures.forEach(async(fixture: any) => {
+    fixtures.forEach((fixture: any) => {
         fixture._sceneConfig = [];
-        const f = await store.state.fixtures.find((x: Fixture) => x.name === fixture._name);
+        const f = store.state.fixtures.find((x: Fixture) => x.name === fixture._name);
         f.sceneConfig.forEach((val: DMXCommand[], key: Scene) => {
             fixture._sceneConfig.push({
                 _scene: key.name,
@@ -105,19 +110,19 @@ function loadSettings(store: any): void {
             const fixtures: Fixture[] = [];
             data.fixtures?.forEach((e: any) => {
                 const sceneConfig: Map<Scene, DMXCommand[]> = new Map();
-                e._sceneConfig.forEach((c: any) => {
+                e._sceneConfig?.forEach((c: any) => {
                     const scene = store.state.scenes.find((s: Scene) => s.name === c._scene);
                     if (scene === undefined) {
                         return;
                     }
                     const commands: DMXCommand[] = [];
-                    c._commands.forEach((command: any) => {
+                    c._commands?.forEach((command: any) => {
                         commands.push(new DMXCommand(command._channel, command._value));
                     });
                     sceneConfig.set(scene, commands);
                 });
                 const controls: FixtureControl[] = [];
-                e._controls.forEach((control: any) => {
+                e._controls?.forEach((control: any) => {
                     controls.push(new FixtureControl(control._name, control._type, control._config));
                 });
                 fixtures.push(new Fixture(e._name, e._address, e._numChannels, sceneConfig, controls));

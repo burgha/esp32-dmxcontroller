@@ -1,10 +1,10 @@
 <template>
-    <div>
+    <div class="d-flex">
         <Button 
             v-for="scene in scenes"
             :key="scene.name"
             :title="scene.name"
-            :active="scene===activeScene"
+            :active="activeScene === scene"
             @click.native="changeScene(scene)"
         />
     </div>
@@ -26,11 +26,17 @@ import Scene from '@/models/Scene';
 export default class SceneSelector extends Vue {
     @Prop(Object) target: DMXControllable | undefined;
     @Prop(Array) scenes: Scene[] | undefined;
+    
     private activeScene: Scene | null = null;
 
+    mounted() {
+        this.activeScene = this.$store.state.activeScene.get(this.target);
+    }
+
     changeScene(newScene: Scene): void {
-        this.activeScene = newScene;
         this.target?.activateScene(newScene);
+        this.activeScene = newScene;
+        this.$store.commit('setActiveScene', {target: this.target, scene: newScene});
         this.$store.dispatch('sendDMXData');
     }
 }

@@ -34,9 +34,9 @@ import Vue from 'vue'
 import Component from 'vue-class-component'
 import Config from '@/models/Config'
 import WifiCredentials from '@/models/WifiCredentials';
-import Scenes from '@/components/Scenes.vue'
-import Groups from '@/components/Groups.vue'
-import Fixtures from '@/components/Fixtures.vue'
+import Scenes from '@/components/Config/Scenes.vue'
+import Groups from '@/components/Config/Groups.vue'
+import Fixtures from '@/components/Config/Fixtures.vue'
 
 @Component({
     components: {

@@ -29,7 +29,7 @@ unsigned long previousTime = 0;
 const long timeoutTime = 2000;
 
 void createWifi() {
-  Serial.println("Creating WiFi Network");
+  Serial.println("\nCreating WiFi Network");
   WiFi.softAP("ESP32-DMX");
 }
 

@@ -33,5 +33,6 @@ export default class FixtureControl {
 
 export enum FixtureControlType {
     Slider,
-    Colorpicker
+    Colorpicker,
+    Switch
 }
