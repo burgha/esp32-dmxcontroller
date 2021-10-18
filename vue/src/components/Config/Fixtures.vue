@@ -92,7 +92,7 @@ export default class Fixtures extends Vue {
     }
 
     get fixtureControlTypes(): object[] {
-        return Object.keys(FixtureControlType).map((x: any) => {
+        return Object.keys(FixtureControlType).filter((x) => {return isNaN(parseInt(x, 10))}).map((x: any) => {
             return {text: x, value: FixtureControlType[x]}
         });
     }

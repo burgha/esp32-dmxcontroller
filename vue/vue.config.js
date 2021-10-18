@@ -10,6 +10,9 @@ module.exports = {
         },
         optimization: {
             splitChunks: false
+        },
+        devServer: {
+            disableHostCheck: true
         }
     },
 

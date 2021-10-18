@@ -27,6 +27,13 @@
             <v-btn class="ma-2" @click="resetSettings()">Reset Settings</v-btn>
             <v-btn class="ma-2" @click="reboot()">Reboot</v-btn>
         </v-sheet>
+
+        <v-sheet class="ma-4 pa-4" elevation="2">
+            <h2>Settings</h2>
+            <v-btn class="ma-2" @click="exportSettings()">Export Settings</v-btn>
+            <v-file-input v-model="selectedFile" />
+            <v-btn class="ma-2" @click="importSettings()">Import Settings</v-btn>
+        </v-sheet>
     </div>
 </template>
 
@@ -35,6 +42,7 @@ import DMXCommand from '@/models/DMXCommand';
 import Fixture from '@/models/Fixture';
 import Vue from 'vue'
 import Component from 'vue-class-component'
+import {convertStateToJson, importObjectIntoStore} from '@/store'
 
 @Component({
     components: {
@@ -42,6 +50,7 @@ import Component from 'vue-class-component'
 })
 export default class Debug extends Vue {
     private selectedFixture: Fixture | null = null;
+    private selectedFile: File | null= null;
 
     get fixtures(): Fixture[] {
         return this.$store.state.fixtures; 
@@ -61,6 +70,7 @@ export default class Debug extends Vue {
         }
         value = typeof value === 'string' ? parseInt(value) : value
         this.selectedFixture.applyDMXCommand(new DMXCommand(channel, value));
+        this.$store.dispatch('sendDMXData');
         this.$store.dispatch('persistState');
     }
 
@@ -70,6 +80,32 @@ export default class Debug extends Vue {
 
     reboot(): void {
         fetch(process.env.VUE_APP_API_URL + '/reboot', {method: "POST"});
+    }
+
+    async exportSettings(): Promise<void> {
+        var fileURL = window.URL.createObjectURL(new Blob([await convertStateToJson(this.$store.state)]));
+        var fileLink = document.createElement('a');
+    
+        fileLink.href = fileURL;
+        fileLink.setAttribute('download', 'settings.json');
+        document.body.appendChild(fileLink);
+    
+        fileLink.click();
+        document.body.removeChild(fileLink);
+    }
+
+    importSettings(): void {
+        if (this.selectedFile) {
+            var reader = new FileReader();
+            reader.readAsText(this.selectedFile, 'UTF-8');
+            const self = this;
+            reader.onload = function(evt) {
+                const json = evt.target?.result?.toString() ?? '';
+                importObjectIntoStore(JSON.parse(json), self.$store);
+                self.$store.dispatch('persistState');
+            }
+            reader.onerror = function() {}
+        }
     }
 }
 </script>

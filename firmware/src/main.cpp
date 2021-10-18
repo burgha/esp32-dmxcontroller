@@ -72,11 +72,13 @@ void initWifi() {
     String json = file.readString();
     file.close();
 
-    DynamicJsonDocument doc(1024);
+    DynamicJsonDocument doc(4096);
     deserializeJson(doc, json);
 
-    String ssid = doc["config"]["_wifiCredentials"]["_ssid"].as<String>();
-    String password = doc["config"]["_wifiCredentials"]["_password"].as<String>();
+    Serial.println(doc.as<String>());
+    // *w = _wifiCredentials, *ss = _ssid, *p = _password
+    String ssid = doc["config"]["*w"]["*ss"].as<String>();
+    String password = doc["config"]["*w"]["*p"].as<String>();
 
     connectWifi(ssid, password);
   } else {
@@ -246,5 +248,5 @@ void loop(){
   dmx_tx_packet(dmxPort);
   dmx_wait_tx_done(dmxPort, DMX_TX_PACKET_TOUT_TICK);
   //Serial.println("DMX Tick");
-  delay(50);
+  delay(25);
 }

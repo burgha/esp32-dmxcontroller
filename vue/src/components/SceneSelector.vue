@@ -1,5 +1,5 @@
 <template>
-    <div class="d-flex">
+    <div class="d-flex justify-center flex-wrap">
         <Button 
             v-for="scene in scenes"
             :key="scene.name"
