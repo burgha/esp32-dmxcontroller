@@ -7,6 +7,8 @@
 #include <esp_dmx.h>
 #include <ArduinoJson.h>
 
+bool DEBUG = true;
+
 int transmitPin = 23;
 int receivePin = 22;
 int enablePin = 21;
@@ -17,6 +19,7 @@ bool dmxAutoLock = false;
 bool dmxManualLock = true;
 
 AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
 
 // Variable to store the HTTP request
 String header;
@@ -77,6 +80,7 @@ void initWifi() {
 
     Serial.println(doc.as<String>());
     // *w = _wifiCredentials, *ss = _ssid, *p = _password
+    Serial.println(doc["config"]["*w"].as<String>());
     String ssid = doc["config"]["*w"]["*ss"].as<String>();
     String password = doc["config"]["*w"]["*p"].as<String>();
 
@@ -84,6 +88,59 @@ void initWifi() {
   } else {
     createWifi();
   }
+}
+
+void handleWsMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    data[len] = 0;
+
+    DynamicJsonDocument doc(256);
+    deserializeJson(doc, (char*)data);
+
+    if (strcmp(doc["event"].as<const char*>(), "dmx") == 0) {
+      String arr = doc["data"].as<String>();
+      String last = "";
+      int channel = 0;
+      for(int i = 1; i < arr.length() - 1; i++) {
+        char c = arr[i];
+        if (c != ',') {
+          last += c;
+        } else {
+          if (dmxData[channel] != last.toInt() && DEBUG) {
+            Serial.print("Write DMX: ");
+            Serial.print(channel);
+            Serial.print(", ");
+            Serial.println(last.toInt());
+            dmxData[channel] = last.toInt();
+          }
+          last = "";
+          channel++;
+        }
+      }
+    }
+  }
+}
+
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWsMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
+void initWsClient() {
+  ws.onEvent(onWsEvent);
 }
 
 void setup() {
@@ -104,6 +161,7 @@ void setup() {
   dmx_set_mode(dmxPort, DMX_MODE_TX);
 
   initWifi();
+  initWsClient();
 
   server.on("/api/settings", HTTP_GET, [](AsyncWebServerRequest *request){
     Serial.println("-> Settings");
@@ -181,7 +239,7 @@ void setup() {
       uint16_t channel = p->name().toInt();
       uint8_t value = p->value().toInt();
 
-      if (dmxData[channel] != value) {
+      if (dmxData[channel] != value && DEBUG) {
         Serial.print("Write DMX: ");
         Serial.print(channel);
         Serial.print(", ");
@@ -204,6 +262,8 @@ void setup() {
     request->send(200);
     ESP.restart();
   });
+
+  server.addHandler(&ws);
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");

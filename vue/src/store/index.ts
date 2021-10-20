@@ -8,6 +8,7 @@ import Vuex from 'vuex'
 import WifiCredentials from '@/models/WifiCredentials'
 import FixtureControl from '@/models/FixtureControl'
 import DMXControllable from '@/models/DMXControllable'
+import WSService from '@/services/WSService'
 
 Vue.use(Vuex)
 
@@ -91,7 +92,8 @@ function sendDMXData(store: any) {
         query += channel + "=" + value + "&";
     });
     query = query.substring(0, query.length - 1); // remove last &
-    fetch(process.env.VUE_APP_API_URL + '/dmx?' + query, {method: "POST"});
+    WSService.getInstance().send('dmx', JSON.stringify(store.state.dmxData));
+    //fetch(process.env.VUE_APP_API_URL + '/dmx?' + query, {method: "POST"});
 }
 
 function getDMXData(store: any) {
@@ -169,7 +171,6 @@ export function importObjectIntoStore(data: any, store: any): void {
         data = data.replaceAll(val, key);
     });
     data = JSON.parse(data);
-    console.log(data);
 
     const scenes: Scene[] = [];
     data.scenes?.forEach((e: any) => {
@@ -216,5 +217,4 @@ export function importObjectIntoStore(data: any, store: any): void {
     const config = new Config();
     config.wifiCredentials = new WifiCredentials(data.config._wifiCredentials._ssid, data.config._wifiCredentials._password);
     store.commit('setConfig', config);
-    console.log(store.state);
 }
