@@ -10,4 +10,12 @@ export default class Config {
         this._wifiCredentials = v;
     }
     
+    private _useWebsockets : boolean = true;
+    public get useWebsockets() : boolean {
+        return this._useWebsockets;
+    }
+    public set useWebsockets(v : boolean) {
+        this._useWebsockets = v;
+    }
+    
 }

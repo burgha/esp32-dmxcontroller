@@ -22,7 +22,12 @@
                     <h2>WiFi</h2>
                     <v-text-field v-model="credentials.ssid" placeholder="SSID" />
                     <v-text-field v-model="credentials.password" placeholder="Password" />
-                    <v-btn class="ma-2" @click="save()">Save</v-btn>
+                    <v-btn class="ma-2" @click="saveWifiConfig()">Save</v-btn>
+                </v-sheet>
+                <v-sheet class="ma-4 pa-4" elevation="2">
+                    <h2>Transport</h2>
+                    <v-switch v-model="useWebsockets" label="Use WebSockets" />
+                    <v-btn class="ma-2" @click="saveTransportConfig()">Save</v-btn>
                 </v-sheet>
             </v-tab-item>
         </v-tabs-items>
@@ -48,18 +53,25 @@ import Fixtures from '@/components/Config/Fixtures.vue'
 export default class Settings extends Vue {
     tab: any = null;
     credentials: WifiCredentials = new WifiCredentials('', '');
+    useWebsockets: boolean = true;
 
     mounted(): void {
         this.credentials = this.config.wifiCredentials;
+        this.useWebsockets = this.config.useWebsockets;
     }
 
     get config(): Config {
         return this.$store.state.config;
     }
 
-    public save(): void {
+    public saveWifiConfig(): void {
         this.config.wifiCredentials.ssid = this.credentials.ssid;
         this.config.wifiCredentials.password = this.credentials.password;
+        this.$store.dispatch('persistState');
+    }
+
+    public saveTransportConfig(): void {
+        this.config.useWebsockets = this.useWebsockets;
         this.$store.dispatch('persistState');
     }
 }

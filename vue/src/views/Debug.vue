@@ -105,6 +105,8 @@ export default class Debug extends Vue {
                 self.$store.dispatch('persistState');
             }
             reader.onerror = function() {}
+        } else {
+            (this.$root.$children[0] as any).showSnackbar('No file selected');
         }
     }
 }

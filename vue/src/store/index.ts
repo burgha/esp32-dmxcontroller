@@ -87,13 +87,23 @@ function loadSettings(store: any): void {
 }
 
 function sendDMXData(store: any) {
+    if (store.state.config.useWebsockets) {
+        if(!WSService.getInstance().send('dmx', JSON.stringify(store.state.dmxData))) {
+            //Fallback HTTP
+            sendDMXDataHTTP(store);
+        }
+    } else {
+        sendDMXDataHTTP(store);
+    }
+}
+
+function sendDMXDataHTTP(store: any): void {
     let query = "";
     store.state.dmxData.forEach((value: number, channel: number) => {
         query += channel + "=" + value + "&";
     });
     query = query.substring(0, query.length - 1); // remove last &
-    WSService.getInstance().send('dmx', JSON.stringify(store.state.dmxData));
-    //fetch(process.env.VUE_APP_API_URL + '/dmx?' + query, {method: "POST"});
+    fetch(process.env.VUE_APP_API_URL + '/dmx?' + query, {method: "POST"});
 }
 
 function getDMXData(store: any) {
@@ -124,6 +134,7 @@ const compressionMap = new Map<string, string>([
     ['"_type"', '"*t"'],
     ['"_members"', '"*m"'],
     ['"_config"', '"*cf"'],
+    ['"_useWebsockets"', '"*uW"'],
 ]);
 
 export async function convertStateToJson(state: any): Promise<string> {

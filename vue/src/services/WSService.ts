@@ -6,8 +6,8 @@ export default class WSService {
         return this._url;
     }
     
-    private _websocket : any;
-    public get websocket() : any {
+    private _websocket! : WebSocket;
+    public get websocket() : WebSocket {
         return this._websocket;
     }
     
@@ -37,19 +37,45 @@ export default class WSService {
         this._onClose = fn;
         this._websocket.onclose = this._onOpen();
     }
+    
+    private _tries : number = 0;
 
     constructor(url: string) {
         this._url = url;
-        this._websocket = new WebSocket(url);
-        WSService._instance = this;
+        this.connect();
     }
 
-    public send(event: string, data: any) {
-        if (this._websocket.readyState === 0) {
-            setTimeout(() => this.send(event, data), 2000);
-            return;
+    public send(event: string, data: any): boolean | null {
+        if (this._tries > 20) {
+            this._tries = 0;
+            return false;
+        }
+        if (this._websocket.readyState === WebSocket.CONNECTING) {
+            setTimeout(() => this.send(event, data), 200);
+            this._tries++;
+            return null;
+        }
+        if (this.websocket.readyState !== WebSocket.OPEN) {
+            this.connect();
+            this._tries++;
+            setTimeout(() => this.send(event, data), 200);
+            return null;
         }
         this._websocket.send(JSON.stringify({event, data}));
+        return true;
+    }
+
+    private connect(): void {
+        this._websocket = new WebSocket(this._url);
+        if (this._onOpen !== undefined) {
+            this._websocket.onopen = this._onOpen();
+        }
+        if (this._onMessage !== undefined) {
+            this._websocket.onmessage = this._onMessage();
+        }
+        if (this._onClose !== undefined) {
+            this._websocket.onclose = this._onClose();
+        }
     }
 
     static createInstance(url: string): void {
