@@ -3,9 +3,9 @@
 #include <SPIFFS.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
-#include <wifi_credentials.h>
 #include <esp_dmx.h>
 #include <ArduinoJson.h>
+#include <map>
 
 bool DEBUG = true;
 
@@ -30,6 +30,25 @@ unsigned long currentTime = millis();
 unsigned long previousTime = 0; 
 // Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
+
+char wsBuffer[8192];
+int wsBufferLength = 0;
+
+DynamicJsonDocument settings(8192);
+
+void loadSettings() {
+  if (SPIFFS.exists("/settings.json")) {
+    File file = SPIFFS.open("/settings.json", "r");
+    String json = file.readString();
+    file.close();
+
+    deserializeJson(settings, json);
+
+    if (DEBUG) {
+      Serial.println(settings.as<String>());
+    }
+  }
+}
 
 void createWifi() {
   Serial.println("\nCreating WiFi Network");
@@ -61,61 +80,95 @@ void connectWifi(String ssid, String password) {
 }
 
 void initWifi() {
-  // Debug
-  if (false) {
-    WiFi.begin(wifi_ssid, wifi_password);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-    }
+  if (!SPIFFS.exists("/settings.json")) {
+    createWifi();
     return;
   }
+  // *w = _wifiCredentials, *ss = _ssid, *p = _password
+  String ssid = settings["config"]["*w"]["*ss"].as<String>();
+  String password = settings["config"]["*w"]["*p"].as<String>();
 
-  if (SPIFFS.exists("/settings.json")) {
-    File file = SPIFFS.open("/settings.json", "r");
-    String json = file.readString();
-    file.close();
+  Serial.println(ssid);
 
-    DynamicJsonDocument doc(4096);
-    deserializeJson(doc, json);
-
-    Serial.println(doc.as<String>());
-    // *w = _wifiCredentials, *ss = _ssid, *p = _password
-    Serial.println(doc["config"]["*w"].as<String>());
-    String ssid = doc["config"]["*w"]["*ss"].as<String>();
-    String password = doc["config"]["*w"]["*p"].as<String>();
-
+  if (ssid != "" && password != "") {
     connectWifi(ssid, password);
+    return;
   } else {
     createWifi();
   }
 }
 
+void handleWsEvent(char* payload, size_t len) {
+  if (DEBUG) {
+    Serial.println("Incoming WS Event:");
+    Serial.println(payload);
+  }
+  DynamicJsonDocument doc(8192);
+  deserializeJson(doc, payload);
+  const char* event = doc["event"].as<const char*>();
+  if (strcmp(event, "dmx") == 0) {
+    String arr = doc["data"].as<String>();
+    String last = "";
+    int channel = 0;
+    for(int i = 1; i < arr.length() - 1; i++) {
+      char c = arr[i];
+      if (c != ',') {
+        last += c;
+      } else {
+        if (dmxData[channel] != last.toInt() && DEBUG) {
+          Serial.print("Write DMX: ");
+          Serial.print(channel);
+          Serial.print(", ");
+          Serial.println(last.toInt());
+          dmxData[channel] = last.toInt();
+        }
+        last = "";
+        channel++;
+      }
+    }
+  } else if (strcmp(event, "settings") == 0) {
+    String settings = doc["data"].as<String>();
+    bool lockBefore = dmxManualLock;
+    dmxManualLock = true;
+    delay(100);
+    File file = SPIFFS.open("/settings.json", "w");
+    file.print(settings);
+    file.close();
+    delay(100);
+    dmxManualLock = lockBefore;
+  }
+}
+
 void handleWsMessage(void *arg, uint8_t *data, size_t len) {
   AwsFrameInfo *info = (AwsFrameInfo*)arg;
-  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-    data[len] = 0;
 
-    DynamicJsonDocument doc(256);
-    deserializeJson(doc, (char*)data);
-
-    if (strcmp(doc["event"].as<const char*>(), "dmx") == 0) {
-      String arr = doc["data"].as<String>();
-      String last = "";
-      int channel = 0;
-      for(int i = 1; i < arr.length() - 1; i++) {
-        char c = arr[i];
-        if (c != ',') {
-          last += c;
-        } else {
-          if (dmxData[channel] != last.toInt() && DEBUG) {
-            Serial.print("Write DMX: ");
-            Serial.print(channel);
-            Serial.print(", ");
-            Serial.println(last.toInt());
-            dmxData[channel] = last.toInt();
-          }
-          last = "";
-          channel++;
+  if(info->index == 0 && info->num == 0) {
+    // message start
+    wsBufferLength = 0;
+  }
+  memcpy(&wsBuffer[info->index], data, len);
+  wsBufferLength += len;
+  if(info->final && info->index == 0 && info->len == len){
+    //the whole message is in a single frame and we got all of it's data
+    if(info->opcode == WS_TEXT){
+        char result[wsBufferLength];
+        strncpy(result, wsBuffer, wsBufferLength);
+        result[wsBufferLength-1] = '\0';
+        wsBufferLength = 0;
+        handleWsEvent(result, wsBufferLength);
+    }
+  } else {
+    //message is comprised of multiple frames or the frame is split into multiple packets
+    if((info->index + len) == info->len){
+      // frame end
+      if(info->final){
+        // message end
+        if(info->message_opcode == WS_TEXT) {
+          char result[wsBufferLength];
+          strncpy(result, wsBuffer, wsBufferLength);
+          result[wsBufferLength-1] = '\0';
+          wsBufferLength = 0;
+          handleWsEvent(result, wsBufferLength);
         }
       }
     }
@@ -143,6 +196,11 @@ void initWsClient() {
   ws.onEvent(onWsEvent);
 }
 
+String getFileExtension(String filename) {
+  int dot = filename.lastIndexOf(".");
+  return filename.substring(dot);
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -151,6 +209,8 @@ void setup() {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
+
+  loadSettings();
 
   // Init DMX
   const dmx_config_t config = DMX_DEFAULT_CONFIG;
@@ -165,21 +225,23 @@ void setup() {
 
   server.on("/api/settings", HTTP_GET, [](AsyncWebServerRequest *request){
     Serial.println("-> Settings");
+    bool lockBefore = dmxManualLock;
+    dmxManualLock = true;
     delay(100);
     File file = SPIFFS.open("/settings.json", "r");
     String data = file.readString();
     file.close();
-    Serial.println(data);
+    delay(100);
+    dmxManualLock = lockBefore;
+    if (DEBUG) {
+      Serial.println(data);
+    }
     request->send(200, "application/json", data);
     delay(100);
   });
 
   server.on("/api/settings", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
     Serial.println("<- Settings");
-    bool lockBefore = dmxManualLock;
-    dmxManualLock = true;
-    delay(100);
-
     if (data[0] != 123) {
       Serial.println("Invalid settings received. ignoring");
       for(size_t i=0; i<len; i++){
@@ -189,9 +251,15 @@ void setup() {
       return;
     }
 
+    bool lockBefore = dmxManualLock;
+    dmxManualLock = true;
+    delay(100);
+
     File file = SPIFFS.open("/settings.json", "w");
     for(size_t i=0; i<len; i++){
-      Serial.print(data[i]);
+      if (DEBUG) {
+        Serial.print(data[i]);
+      }
       file.write(data[i]);
     }
     file.close();
@@ -253,6 +321,7 @@ void setup() {
 
   server.on("/api/clearSettings", HTTP_POST, [](AsyncWebServerRequest *request){
     Serial.println("Clearing Settings");
+    dmxAutoLock = true;
     SPIFFS.remove("/settings.json");
     request->send(200);
   });
@@ -274,25 +343,32 @@ void setup() {
         return;
     }
 
+    std::map<String, String> mime_types = {
+        { ".js", "text/javascript" },
+        { ".html", "text/html" },
+        { ".css", "text/css" },
+        { ".ico", "image/x-ico" },
+        { ".png", "image/png" },
+        { ".svg", "image/svg" },
+        { ".jpg", "image/jpeg" }
+    };
+
     Serial.print("Request: ");
     Serial.println(request->url());
     String url = request->url();
+    dmxAutoLock = true;
     if (url == "/") {
-      dmxAutoLock = true;
       File file = SPIFFS.open("/index.html", "r");
       String data = file.readString();
       request->send(200, "text/html", data);
-    } else if (url == "/favicon.ico") {
-      dmxAutoLock = true;
-      File file = SPIFFS.open("/favicon.ico", "r");
-      String data = file.readString();
-      request->send(200, "image/x-icon", data);
-    } else if (url == "/js/app.js") {
-      dmxAutoLock = true;
-      request->send(SPIFFS, "/js/app.js", "text/javascript");
+    } else {
+      String file_extension = getFileExtension(url);
+      String mime_type = mime_types[file_extension];
+      request->send(SPIFFS, url, "text/javascript");
     }
   });
 
+  Serial.println("Init done");
   server.begin();
 }
 
@@ -301,12 +377,14 @@ void loop(){
     return;
   }
   if (dmxAutoLock) {
-    delay(5000);
+    delay(2500);
     dmxAutoLock = false;
   }
   dmx_write_packet(dmxPort, dmxData, DMX_MAX_PACKET_SIZE);
   dmx_tx_packet(dmxPort);
   dmx_wait_tx_done(dmxPort, DMX_TX_PACKET_TOUT_TICK);
-  //Serial.println("DMX Tick");
+  if (DEBUG) {
+    //Serial.println("DMX Tick");
+  }
   delay(25);
 }

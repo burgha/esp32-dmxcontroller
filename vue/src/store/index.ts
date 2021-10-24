@@ -69,6 +69,17 @@ export default new Vuex.Store({
 })
 
 async function persistState(store: any): Promise<void> {
+    if (store.state.config.useWebsockets) {
+        if(!WSService.getInstance().send('settings', await convertStateToJson(store.state))) {
+            //Fallback HTTP
+            sendConfigHTTP(store);
+        }
+    } else {
+        sendConfigHTTP(store);
+    }
+}
+
+async function sendConfigHTTP(store: any): Promise<void> {
     fetch(process.env.VUE_APP_API_URL + '/settings', {
         method: 'POST',
         headers: {

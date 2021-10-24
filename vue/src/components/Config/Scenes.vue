@@ -5,9 +5,13 @@
             <v-text-field v-model="formScene.name" placeholder="Name" />
 
             <div v-if="editing">
-                <div v-for="fixture in fixtures" :key="fixture.name">
-                    {{ fixture.name }}
-                    <v-container>
+                <div v-for="fixture in fixtures" :key="fixture.name" class="my-5">
+                    <div class="d-flex align-center justify-center">
+                        <h4>{{ fixture.name }}</h4>
+                        <v-btn v-if="fixtureSceneConfig[fixture.name][formScene.name]" click @click="copyCommands(fixture, formScene)"><v-icon>mdi-content-copy</v-icon></v-btn>
+                        <v-btn icon @click="pasteCommands(fixture, formScene)"><v-icon>mdi-content-paste</v-icon></v-btn>
+                    </div>
+                    <v-container v-if="fixtureSceneConfig[fixture.name]">
                         <v-row v-for="command in fixtureSceneConfig[fixture.name][formScene.name]" :key="command[0] + Math.random()">
                             <v-col cols="4">
                                 <v-text-field v-model.number="command[0]" placeholder="Address" />
@@ -51,7 +55,7 @@ import Component from 'vue-class-component'
 export default class Scenes extends Vue {
     private formScene = new Scene('');
     private editing = false;
-
+    private commandClipboard = [];
     private fixtureSceneConfig: any = {}
 
     get scenes(): Scene[] {
@@ -84,6 +88,18 @@ export default class Scenes extends Vue {
 
     deleteCommandFromFixtureSceneConfig(fixture: Fixture, scene: Scene, index: number): void {
         this.fixtureSceneConfig[fixture.name][scene.name].splice(index, 1);
+        this.$forceUpdate();
+    }
+
+    copyCommands(fixture: Fixture, scene: Scene): void {
+        this.commandClipboard = this.fixtureSceneConfig[fixture.name][scene.name];
+    }
+
+    pasteCommands(fixture: Fixture, scene: Scene): void {
+        if (this.commandClipboard.length === 0) {
+            return;
+        }
+        this.fixtureSceneConfig[fixture.name][scene.name] = this.commandClipboard;
         this.$forceUpdate();
     }
 

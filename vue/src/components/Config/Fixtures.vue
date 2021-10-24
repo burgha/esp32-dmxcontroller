@@ -54,7 +54,7 @@
         </v-sheet>
 
         <div v-for="fixture in fixtures" :key="fixture.name">
-            {{ fixture.name }}({{ fixture.address }} - {{ Number(fixture.address) + Number(fixture.numChannels) }})
+            {{ fixture.name }} ({{ fixture.address }} - {{ Number(fixture.address) + Number(fixture.numChannels) }})
             <v-btn class="ma-2" @click="edit(fixture)">Edit</v-btn>
             <v-btn class="ma-2" @click="remove(fixture)">Delete</v-btn>
             <v-divider v-if="fixtures.indexOf(fixture) < fixtures.length - 1" />
