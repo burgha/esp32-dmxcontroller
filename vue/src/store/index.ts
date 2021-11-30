@@ -72,7 +72,7 @@ async function persistState(store: any): Promise<void> {
     if (store.state.config.useWebsockets) {
         if(!WSService.getInstance().send('settings', await convertStateToJson(store.state))) {
             //Fallback HTTP
-            sendConfigHTTP(store);
+            //sendConfigHTTP(store);
         }
     } else {
         sendConfigHTTP(store);
@@ -146,6 +146,7 @@ const compressionMap = new Map<string, string>([
     ['"_members"', '"*m"'],
     ['"_config"', '"*cf"'],
     ['"_useWebsockets"', '"*uW"'],
+    ['"_startupScene"', '"*sSc"'],
 ]);
 
 export async function convertStateToJson(state: any): Promise<string> {
@@ -238,5 +239,7 @@ export function importObjectIntoStore(data: any, store: any): void {
 
     const config = new Config();
     config.wifiCredentials = new WifiCredentials(data.config._wifiCredentials._ssid, data.config._wifiCredentials._password);
+    config.useWebsockets = data.config._useWebsockets;
+    config.startupScene = data.config._startupScene;
     store.commit('setConfig', config);
 }

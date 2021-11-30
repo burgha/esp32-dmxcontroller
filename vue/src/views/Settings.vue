@@ -25,6 +25,11 @@
                     <v-btn class="ma-2" @click="saveWifiConfig()">Save</v-btn>
                 </v-sheet>
                 <v-sheet class="ma-4 pa-4" elevation="2">
+                    <h2>Startup</h2>
+                    <v-select v-model="startupScene" label="Startup Scene" :items="scenes" item-text="name" />
+                    <v-btn class="ma-2" @click="saveStartupConfig()">Save</v-btn>
+                </v-sheet>
+                <v-sheet class="ma-4 pa-4" elevation="2">
                     <h2>Transport</h2>
                     <v-switch v-model="useWebsockets" label="Use WebSockets" />
                     <v-btn class="ma-2" @click="saveTransportConfig()">Save</v-btn>
@@ -42,6 +47,7 @@ import WifiCredentials from '@/models/WifiCredentials';
 import Scenes from '@/components/Config/Scenes.vue'
 import Groups from '@/components/Config/Groups.vue'
 import Fixtures from '@/components/Config/Fixtures.vue'
+import Scene from '@/models/Scene';
 
 @Component({
     components: {
@@ -53,20 +59,34 @@ import Fixtures from '@/components/Config/Fixtures.vue'
 export default class Settings extends Vue {
     tab: any = null;
     credentials: WifiCredentials = new WifiCredentials('', '');
+    startupScene: string|null = null;
     useWebsockets: boolean = true;
 
     mounted(): void {
         this.credentials = this.config.wifiCredentials;
         this.useWebsockets = this.config.useWebsockets;
+        this.startupScene = this.config.startupScene;
     }
 
     get config(): Config {
         return this.$store.state.config;
     }
 
+    get scenes(): Scene[] {
+        return this.$store.state.scenes;
+    }
+
     public saveWifiConfig(): void {
         this.config.wifiCredentials.ssid = this.credentials.ssid;
         this.config.wifiCredentials.password = this.credentials.password;
+        this.$store.dispatch('persistState');
+    }
+
+    public saveStartupConfig(): void {
+        if (this.startupScene === null) {
+            return;
+        }
+        this.config.startupScene = this.startupScene;
         this.$store.dispatch('persistState');
     }
 

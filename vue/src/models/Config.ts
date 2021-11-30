@@ -18,4 +18,12 @@ export default class Config {
         this._useWebsockets = v;
     }
     
+    private _startupScene : string = '';
+    public get startupScene() : string {
+        return this._startupScene;
+    }
+    public set startupScene(v : string) {
+        this._startupScene = v;
+    }
+    
 }

@@ -98,6 +98,25 @@ void initWifi() {
   }
 }
 
+void setStartupScene() {
+  String startupScene = settings["config"]["*sSc"].as<String>();
+  JsonArray fixtures = settings["*fs"].as<JsonArray>();
+  for(JsonVariant f : fixtures) {
+    JsonArray sceneConfig = f["*sC"].as<JsonArray>();
+    for(JsonVariant sc : sceneConfig) {
+      if (sc["*s"].as<String>() == startupScene) {
+        JsonArray cmds = sc["*cs"].as<JsonArray>();
+        for(JsonVariant cmd : cmds) {
+          int channel = cmd["*c"].as<int>();
+          int value = cmd["*v"].as<int>();
+          dmxData[channel] = value;
+        }
+        break;
+      }
+    }
+  }
+}
+
 void handleWsEvent(char* payload, size_t len) {
   if (DEBUG) {
     Serial.println("Incoming WS Event:");
@@ -222,6 +241,7 @@ void setup() {
 
   initWifi();
   initWsClient();
+  setStartupScene();
 
   server.on("/api/settings", HTTP_GET, [](AsyncWebServerRequest *request){
     Serial.println("-> Settings");
