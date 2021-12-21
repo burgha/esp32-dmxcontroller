@@ -15,7 +15,7 @@ int enablePin = 21;
 
 dmx_port_t dmxPort = DMX_NUM_1;
 byte dmxData[DMX_MAX_PACKET_SIZE];
-bool dmxAutoLock = false;
+int dmxAutoLock = 0;
 bool dmxManualLock = true;
 
 AsyncWebServer server(80);
@@ -239,9 +239,9 @@ void setup() {
   dmx_driver_install(dmxPort, DMX_MAX_PACKET_SIZE, 10, &dmx_queue, ESP_INTR_FLAG_IRAM);
   dmx_set_mode(dmxPort, DMX_MODE_TX);
 
+  setStartupScene();
   initWifi();
   initWsClient();
-  setStartupScene();
 
   server.on("/api/settings", HTTP_GET, [](AsyncWebServerRequest *request){
     Serial.println("-> Settings");
@@ -341,7 +341,7 @@ void setup() {
 
   server.on("/api/clearSettings", HTTP_POST, [](AsyncWebServerRequest *request){
     Serial.println("Clearing Settings");
-    dmxAutoLock = true;
+    dmxAutoLock = 2000;
     SPIFFS.remove("/settings.json");
     request->send(200);
   });
@@ -376,7 +376,7 @@ void setup() {
     Serial.print("Request: ");
     Serial.println(request->url());
     String url = request->url();
-    dmxAutoLock = true;
+    dmxAutoLock = 10000;
     if (url == "/") {
       File file = SPIFFS.open("/index.html", "r");
       String data = file.readString();
@@ -384,27 +384,29 @@ void setup() {
     } else {
       String file_extension = getFileExtension(url);
       String mime_type = mime_types[file_extension];
-      request->send(SPIFFS, url, "text/javascript");
+      request->send(SPIFFS, url, mime_type);
     }
   });
 
   Serial.println("Init done");
   server.begin();
+  dmxManualLock = false;
 }
 
 void loop(){
   if (dmxManualLock) {
     return;
   }
-  if (dmxAutoLock) {
-    delay(2500);
-    dmxAutoLock = false;
+  if (dmxAutoLock > 0) {
+    delay(1000);
+    dmxAutoLock -= 1000;
+    return;
   }
   dmx_write_packet(dmxPort, dmxData, DMX_MAX_PACKET_SIZE);
   dmx_tx_packet(dmxPort);
   dmx_wait_tx_done(dmxPort, DMX_TX_PACKET_TOUT_TICK);
-  if (DEBUG) {
-    //Serial.println("DMX Tick");
-  }
+  // if (DEBUG) {
+  //   Serial.println(esp_random());
+  // }
   delay(25);
 }
