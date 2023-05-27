@@ -1,104 +1,78 @@
 <template>
     <div class="settings">
         <h1>Settings</h1>
-        <v-tabs id="tabs" v-model="tab" class="mx-4" show-arrows centered>
-            <v-tab>Scenes</v-tab>
-            <v-tab>Groups</v-tab>
-            <v-tab>Fixtures</v-tab>
-            <v-tab>Config</v-tab>
+        <v-tabs v-model="tab" bg-color="primary">
+            <v-tab value="scenes">Scenes</v-tab>
+            <v-tab value="groups">Groups</v-tab>
+            <v-tab value="fixtures">Fixtures</v-tab>
+            <v-tab value="config">Config</v-tab>
         </v-tabs>
-        <v-tabs-items v-model="tab">
-            <v-tab-item>
+
+        <v-window v-model="tab">
+            <v-window-item value="scenes">
                 <Scenes />
-            </v-tab-item>
-            <v-tab-item>
+            </v-window-item>
+
+            <v-window-item value="groups">
                 <Groups />
-            </v-tab-item>
-            <v-tab-item>
+            </v-window-item>
+
+            <v-window-item value="fixtures">
                 <Fixtures />
-            </v-tab-item>
-            <v-tab-item>
+            </v-window-item>
+
+            <v-window-item value="config">
                 <v-sheet class="ma-4 pa-4" elevation="2">
                     <h2>WiFi</h2>
-                    <v-text-field v-model="credentials.ssid" placeholder="SSID" />
-                    <v-text-field v-model="credentials.password" placeholder="Password" />
-                    <v-btn class="ma-2" @click="saveWifiConfig()">Save</v-btn>
+                    <v-text-field v-model="store.config.wifiCredentials.ssid" placeholder="SSID" />
+                    <v-text-field v-model="store.config.wifiCredentials.password" placeholder="Password" />
                 </v-sheet>
                 <v-sheet class="ma-4 pa-4" elevation="2">
                     <h2>Startup</h2>
-                    <v-select v-model="startupScene" label="Startup Scene" :items="scenes" item-text="name" />
-                    <v-btn class="ma-2" @click="saveStartupConfig()">Save</v-btn>
+                    <v-select v-model="store.config.startupScene" label="Startup Scene" :items="store.scenes"
+                        item-title="name" />
                 </v-sheet>
                 <v-sheet class="ma-4 pa-4" elevation="2">
                     <h2>Transport</h2>
-                    <v-switch v-model="useWebsockets" label="Use WebSockets" />
-                    <v-btn class="ma-2" @click="saveTransportConfig()">Save</v-btn>
+                    <v-switch v-model="store.config.useWebsockets" label="Use WebSockets" />
                 </v-sheet>
-            </v-tab-item>
-        </v-tabs-items>
+                <v-btn class="mx-4 my-2" color="primary" @click="persistState()">Save</v-btn>
+            </v-window-item>
+        </v-window>
+        <v-snackbar v-model="snackbar" timeout="2000">
+            {{ snackbarText }}
+
+            <template v-slot:action="{ attrs }">
+                <v-btn color="pink" text v-bind="attrs" @click="snackbar = false">
+                    Close
+                </v-btn>
+            </template>
+        </v-snackbar>
     </div>
 </template>
 
-<script lang="ts">
-import Vue from 'vue'
-import Component from 'vue-class-component'
-import Config from '@/models/Config'
-import WifiCredentials from '@/models/WifiCredentials';
+<script setup lang="ts">
 import Scenes from '@/components/Config/Scenes.vue'
 import Groups from '@/components/Config/Groups.vue'
 import Fixtures from '@/components/Config/Fixtures.vue'
-import Scene from '@/models/Scene';
+import { ref, type Ref } from 'vue';
+import { useDmxStore } from '@/stores/dmx';
 
-@Component({
-    components: {
-        Scenes,
-        Groups,
-        Fixtures
-    }
-})
-export default class Settings extends Vue {
-    tab: any = null;
-    credentials: WifiCredentials = new WifiCredentials('', '');
-    startupScene: string|null = null;
-    useWebsockets: boolean = true;
+const store = useDmxStore();
 
-    mounted(): void {
-        this.credentials = this.config.wifiCredentials;
-        this.useWebsockets = this.config.useWebsockets;
-        this.startupScene = this.config.startupScene;
-    }
+let tab: any = ref(3);
+let snackbar = ref(false);
+let snackbarText = ref("Settings saved");
 
-    get config(): Config {
-        return this.$store.state.config;
-    }
-
-    get scenes(): Scene[] {
-        return this.$store.state.scenes;
-    }
-
-    public saveWifiConfig(): void {
-        this.config.wifiCredentials.ssid = this.credentials.ssid;
-        this.config.wifiCredentials.password = this.credentials.password;
-        this.$store.dispatch('persistState');
-    }
-
-    public saveStartupConfig(): void {
-        if (this.startupScene === null) {
-            return;
-        }
-        this.config.startupScene = this.startupScene;
-        this.$store.dispatch('persistState');
-    }
-
-    public saveTransportConfig(): void {
-        this.config.useWebsockets = this.useWebsockets;
-        this.$store.dispatch('persistState');
-    }
+function persistState() {
+    store.persistState().then(() => {
+        snackbar.value = true;
+    });
 }
 </script>
 
 <style scoped>
-    #tabs {
-        width: unset;
-    }
+#tabs {
+    width: unset;
+}
 </style>

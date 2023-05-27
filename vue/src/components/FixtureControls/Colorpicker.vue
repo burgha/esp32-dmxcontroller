@@ -1,46 +1,54 @@
 <template>
     <div class="color-picker">
-        <v-color-picker
-            dot-size="25"
-            swatches-max-height="200"
-            @update:color="onUpdateColor($event)"
-        />
+        <v-color-picker dot-size="25" swatches-max-height="200" :model-value="color" @update:modelValue="onUpdateColor($event)" />
     </div>
 </template>
 
-<script lang="ts">
-import Vue from 'vue'
-import Component from 'vue-class-component'
-import { Prop } from 'vue-property-decorator'
+<script setup lang="ts">
 import Fixture from '@/models/Fixture';
 import DMXCommand from '@/models/DMXCommand';
+import { computed, onMounted } from 'vue';
+import { useDmxStore } from '@/stores/dmx';
 
-@Component
-export default class ColorpickerFixtureControl extends Vue {
-    @Prop(Fixture) fixture: Fixture | undefined
-    @Prop(Array) channels: number[] | undefined;
-    
-    private changeLock = true;
-    private color: object | null = null;
-    
-    mounted() {
-        this.changeLock = false;
-    }
+const store = useDmxStore();
+const props = defineProps<{
+    fixture: Fixture | undefined,
+    channels: number[] | undefined
+}>();
 
-    onUpdateColor(val: any): void {
-        this.color = val;
-        if (this.channels === undefined || this.fixture === undefined || this.changeLock) {
-            return;
-        }
-        this.changeLock = true;
-        setTimeout(() => {this.changeLock = false}, 1000);
-        this.fixture.activateCommands([
-            new DMXCommand(this.fixture.getAbsoluteChannel(this.channels[0]), val.rgba.r),
-            new DMXCommand(this.fixture.getAbsoluteChannel(this.channels[1]), val.rgba.g),
-            new DMXCommand(this.fixture.getAbsoluteChannel(this.channels[2]), val.rgba.b),
-        ]);
-        this.$store.dispatch('sendDMXData');
+const color = computed(() => {
+    if (!props.channels) {
+        return "#000"
     }
+    return rgb2Hex(props.fixture?.getDMXData(props.channels[0]), props.fixture?.getDMXData(props.channels[1]), props.fixture?.getDMXData(props.channels[2]));
+});
+
+function rgb2Hex(r: number, g: number, b: number) {
+    return '#' + [r, g, b].map(x => {
+        const hex = x.toString(16)
+        return hex.length === 1 ? '0' + hex : hex
+    }).join('');
+}
+
+function hex2rgb(hex: string) {
+    const red = parseInt(hex.substring(1, 3), 16);
+    const green = parseInt(hex.substring(3, 5), 16);
+    const blue = parseInt(hex.substring(5, 7), 16);
+
+    return [red, green, blue];
+}
+
+function onUpdateColor(val: any): void {
+    val = hex2rgb(val);
+    if (props.channels === undefined || props.fixture === undefined) {
+        return;
+    }
+    props.fixture.applyCommands([
+        new DMXCommand(props.channels[0], val[0]),
+        new DMXCommand(props.channels[1], val[1]),
+        new DMXCommand(props.channels[2], val[2]),
+    ]);
+    store.sendDMXData()
 }
 </script>
 

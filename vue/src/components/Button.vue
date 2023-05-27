@@ -4,16 +4,11 @@
     </v-sheet>
 </template>
 
-<script lang="ts">
-import Vue from 'vue'
-import Component from 'vue-class-component'
-import { Prop } from 'vue-property-decorator'
-
-@Component
-export default class Button extends Vue {
-    @Prop(String) title: string | undefined;
-    @Prop(Boolean) active: boolean | undefined;
-}
+<script setup lang="ts">
+    const props = defineProps({
+        title: String,
+        active: Boolean
+    })
 </script>
 
 <style scoped>

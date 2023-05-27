@@ -1,36 +1,39 @@
 <template>
     <div class="switch">
-        <v-switch v-model="state" @change="onChange($event)" />
+        <v-switch :model-value="state" @update:modelValue="onChange($event)" />
     </div>
 </template>
 
-<script lang="ts">
-import Vue from 'vue'
-import Component from 'vue-class-component'
-import { Prop } from 'vue-property-decorator'
+<script setup lang="ts">
 import Fixture from '@/models/Fixture';
 import DMXCommand from '@/models/DMXCommand';
+import { useDmxStore } from '@/stores/dmx';
+import { computed } from 'vue';
 
-@Component
-export default class SwitchFixtureControl extends Vue {
-    @Prop(Fixture) fixture: Fixture | undefined
-    @Prop(Number) channel: number | undefined
-    @Prop(Number) onVal: number | undefined
-    @Prop(Number) offVal: number | undefined
+const store = useDmxStore();
+const props = defineProps<{
+    fixture: Fixture | undefined,
+    channel: number | undefined,
+    onVal: number | undefined,
+    offVal: number | undefined
+}>();
 
-    private state: boolean = false;
-
-    onChange(val: boolean): void {
-        if (this.channel === undefined || this.onVal === undefined || this.offVal === undefined || this.fixture === undefined) {
-            return;
-        }
-        this.fixture.activateCommands([
-            new DMXCommand(this.fixture.getAbsoluteChannel(this.channel), val ? this.onVal : this.offVal),
-        ]);
-        this.$store.dispatch('sendDMXData');
+const state = computed(() => {
+    if (props.fixture === undefined || props.channel === undefined || props.onVal === undefined || props.offVal === undefined) {
+        return false;
     }
+    return props.fixture.getDMXData(props.channel) === props.onVal;
+});
+
+function onChange(val: boolean): void {
+    if (props.channel === undefined || props.onVal === undefined || props.offVal === undefined || props.fixture === undefined) {
+        return;
+    }
+    props.fixture.applyCommands([
+        new DMXCommand(props.channel, val ? props.onVal : props.offVal),
+    ]);
+    store.sendDMXData();
 }
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

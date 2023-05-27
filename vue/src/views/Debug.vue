@@ -4,20 +4,14 @@
 
         <v-sheet class="ma-4 pa-4" elevation="2">
             <h2>Manual DMX Commands</h2>
-            <v-select
-                v-model="selectedFixture"
-                :items="fixtures"
-                item-text="name"
-                :return-object="true"
-                label="Fixture"
-                class="ma-2"
-                outlined
-            />
+            <v-select v-model="selectedFixture" :items="store.fixtures" item-text="name" :return-object="true"
+                label="Fixture" class="ma-2" outlined />
             <div v-if="selectedFixture" class="faderlist d-flex justify-center">
                 <div v-for="index in selectedFixture.numChannels" :key="index" class="fader">
                     {{ index }}
-                    <v-slider v-model="dmxData[selectedFixture.getAbsoluteChannel(index)]" vertical min="0" max="255" class="ma-8" @change="changeDMXValue(index, $event)" />
-                    {{ dmxData[selectedFixture.getAbsoluteChannel(index)] }}
+                    <v-slider v-model="store.dmxData[selectedFixture.getAbsoluteChannel(index)]" vertical min="0" max="255"
+                        class="ma-8" @change="changeDMXValue(index, $event)" />
+                    {{ store.dmxData[selectedFixture.getAbsoluteChannel(index)] }}
                 </div>
             </div>
         </v-sheet>
@@ -37,77 +31,62 @@
     </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import DMXCommand from '@/models/DMXCommand';
 import Fixture from '@/models/Fixture';
-import Vue from 'vue'
-import Component from 'vue-class-component'
-import {convertStateToJson, importObjectIntoStore} from '@/store'
+import { useDmxStore } from '@/stores/dmx';
+import { onMounted, ref } from 'vue';
 
-@Component({
-    components: {
+const store = useDmxStore();
+let selectedFixture = ref<Fixture | null>(null);
+let selectedFile = ref<File | null>(null);
+
+onMounted(() => {
+    store.getDMXData();
+});
+
+function changeDMXValue(channel: number, value: string | number): void {
+    if (selectedFixture === null) {
+        return;
     }
-})
-export default class Debug extends Vue {
-    private selectedFixture: Fixture | null = null;
-    private selectedFile: File | null= null;
+    value = typeof value === 'string' ? parseInt(value) : value
+    selectedFixture.value?.applyDMXCommand(new DMXCommand(channel, value));
+    store.sendDMXData();
+    store.persistState();
+}
 
-    get fixtures(): Fixture[] {
-        return this.$store.state.fixtures; 
-    }
+function resetSettings(): void {
+    fetch(import.meta.env.VITE_APP_API_URL + '/clearSettings', { method: "POST" });
+}
 
-    get dmxData(): Number[] {
-        return this.$store.state.dmxData; 
-    }
+function reboot(): void {
+    fetch(import.meta.env.VITE_APP_API_URL + '/reboot', { method: "POST" });
+}
 
-    mounted() {
-        this.$store.dispatch('getDMXData');
-    }
+async function exportSettings(): Promise<void> {
+    var fileURL = window.URL.createObjectURL(new Blob([await store.convertStateToJson()]));
+    var fileLink = document.createElement('a');
 
-    changeDMXValue(channel: number, value: string | number): void {
-        if (this.selectedFixture === null) {
-            return;
+    fileLink.href = fileURL;
+    fileLink.setAttribute('download', 'settings.json');
+    document.body.appendChild(fileLink);
+
+    fileLink.click();
+    document.body.removeChild(fileLink);
+}
+
+function importSettings(): void {
+    if (selectedFile.value) {
+        var reader = new FileReader();
+        reader.readAsText(selectedFile.value, 'UTF-8');
+        reader.onload = (evt) => {
+            const json = evt.target?.result?.toString() ?? '';
+            store.importObjectIntoStore(JSON.parse(json));
+            store.persistState();
         }
-        value = typeof value === 'string' ? parseInt(value) : value
-        this.selectedFixture.applyDMXCommand(new DMXCommand(channel, value));
-        this.$store.dispatch('sendDMXData');
-        this.$store.dispatch('persistState');
-    }
-
-    resetSettings(): void {
-        fetch(process.env.VUE_APP_API_URL + '/clearSettings', {method: "POST"});
-    }
-
-    reboot(): void {
-        fetch(process.env.VUE_APP_API_URL + '/reboot', {method: "POST"});
-    }
-
-    async exportSettings(): Promise<void> {
-        var fileURL = window.URL.createObjectURL(new Blob([await convertStateToJson(this.$store.state)]));
-        var fileLink = document.createElement('a');
-    
-        fileLink.href = fileURL;
-        fileLink.setAttribute('download', 'settings.json');
-        document.body.appendChild(fileLink);
-    
-        fileLink.click();
-        document.body.removeChild(fileLink);
-    }
-
-    importSettings(): void {
-        if (this.selectedFile) {
-            var reader = new FileReader();
-            reader.readAsText(this.selectedFile, 'UTF-8');
-            const self = this;
-            reader.onload = function(evt) {
-                const json = evt.target?.result?.toString() ?? '';
-                importObjectIntoStore(JSON.parse(json), self.$store);
-                self.$store.dispatch('persistState');
-            }
-            reader.onerror = function() {}
-        } else {
-            (this.$root.$children[0] as any).showSnackbar('No file selected');
-        }
+        reader.onerror = function () { }
+    } else {
+        //(this.$root.$children[0] as any).showSnackbar('No file selected');
     }
 }
 </script>

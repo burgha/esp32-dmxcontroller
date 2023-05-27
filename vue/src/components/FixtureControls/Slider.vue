@@ -1,32 +1,37 @@
 <template>
     <div class="slider">
-        <v-slider min="0" max="255" :thumb-label="true" @change="onChange($event)" />
+        <v-slider min="0" max="255" step="1" :thumb-label="true" :model-value="color" @end="onChange($event)" />
     </div>
 </template>
 
-<script lang="ts">
-import Vue from 'vue'
-import Component from 'vue-class-component'
-import { Prop } from 'vue-property-decorator'
+<script setup lang="ts">
 import Fixture from '@/models/Fixture';
 import DMXCommand from '@/models/DMXCommand';
+import { useDmxStore } from '@/stores/dmx';
+import { computed } from 'vue';
 
-@Component
-export default class SliderFixtureControl extends Vue {
-    @Prop(Fixture) fixture: Fixture | undefined
-    @Prop(Array) channels: number[] | undefined
+const store = useDmxStore();
+const props = defineProps<{
+    fixture: Fixture | undefined,
+    channels: number[] | undefined
+}>();
 
-    onChange(val: number): void {
-        if (this.channels === undefined || this.fixture === undefined) {
-            return;
-        }
-        this.fixture.activateCommands([
-            new DMXCommand(this.fixture.getAbsoluteChannel(this.channels[0]), val),
-        ]);
-        this.$store.dispatch('sendDMXData');
+const color = computed(() => {
+    if (props.channels === undefined || props.channels.length === 0 || props.fixture === undefined) {
+        return 0;
     }
+    return props.fixture.getDMXData(props.channels[0]);
+});
+
+function onChange(val: number): void {
+    if (props.channels === undefined || props.channels.length === 0 || props.fixture === undefined) {
+        return;
+    }
+    props.fixture.applyCommands([
+        new DMXCommand(props.channels[0], val),
+    ]);
+    store.sendDMXData();
 }
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

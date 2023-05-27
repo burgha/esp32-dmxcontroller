@@ -1,18 +1,16 @@
-import Vue from 'vue'
-import VueRouter, { RouteConfig } from 'vue-router'
-import Home from '../views/Home.vue'
-import Settings from '../views/Settings.vue'
-import Debug from '../views/Debug.vue'
-import store from '../store'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import Home from '@/views/Home.vue';
+import Settings from '@/views/Settings.vue';
+import Debug from '@/views/Debug.vue';
+import { useDmxStore } from '@/stores/dmx';
 
-Vue.use(VueRouter)
-
-const routes: Array<RouteConfig> = [
+const routes: Array<RouteRecordRaw> = [
     {
         path: '/',
         name: 'Home',
         beforeEnter: (to, from, next) => {
-            store.commit('setDMXEnabled', true);
+            const store = useDmxStore();
+            store.setDMXEnabled(true);
             next();
         },
         component: Home
@@ -21,7 +19,8 @@ const routes: Array<RouteConfig> = [
         path: '/settings',
         name: 'Settings',
         beforeEnter: (to, from, next) => {
-            store.commit('setDMXEnabled', false);
+            const store = useDmxStore();
+            store.setDMXEnabled(false);
             next();
         },
         component: Settings
@@ -30,15 +29,17 @@ const routes: Array<RouteConfig> = [
         path: '/debug',
         name: 'Debug',
         beforeEnter: (to, from, next) => {
-            store.commit('setDMXEnabled', true);
+            const store = useDmxStore();
+            store.setDMXEnabled(true);
             next();
         },
         component: Debug
     }
 ]
 
-const router = new VueRouter({
-    routes
+const router = createRouter({
+    history: createWebHistory(import.meta.env.BASE_URL),
+    routes: routes
 })
 
 export default router

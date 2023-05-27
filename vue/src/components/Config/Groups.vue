@@ -15,95 +15,72 @@
             </v-container>
         </v-sheet>
 
-        <div v-for="group in groups" :key="group.name">
+        <div v-for="group in store.groups" :key="group.name">
             <p class="text-h6">{{ group.name }}</p>
-            <v-btn class="ma-2" @click="edit(group)">Edit</v-btn>
-            <v-btn class="ma-2" @click="remove(group)">Delete</v-btn>
+            <v-btn class="ma-2" @click="edit(group as Group)">Edit</v-btn>
+            <v-btn class="ma-2" @click="remove(group as Group)">Delete</v-btn>
             <v-container>
                 <p>Members:</p>
-                <v-row v-for="fixture in fixtures" :key="fixture.name" justify="center">
+                <v-row v-for="fixture in store.fixtures" :key="fixture.name" justify="center">
                     <v-col cols="4">
-                        <v-checkbox
-                            class="align-center justify-center"
-                            :input-value="isFixtureInGroup(group, fixture)"
-                            :label="fixture.name"
-                            @click="toggleMembership(group, fixture)"
-                        />
+                        <v-checkbox class="align-center justify-center"
+                            :model-value="isFixtureInGroup(group as Group, fixture as Fixture)" :label="fixture.name"
+                            @click="toggleMembership(group as Group, fixture as Fixture)" />
                     </v-col>
                 </v-row>
-                <v-divider v-if="groups.indexOf(group) < groups.length - 1" />
+                <v-divider v-if="store.groups.indexOf(group) < store.groups.length - 1" />
             </v-container>
         </div>
     </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import Fixture from '@/models/Fixture';
 import Group from '@/models/Group';
-import Vue from 'vue'
-import Component from 'vue-class-component'
+import { useDmxStore } from '@/stores/dmx';
+import { ref } from 'vue';
 
-@Component({
-    components: {
-    }
-})
-export default class Groups extends Vue {
-    private formGroup = new Group('');
-    private editing = false;
+const store = useDmxStore();
 
-    get groups(): Group[] {
-        return this.$store.state.groups; 
-    }
+let formGroup = ref(new Group(''));
+let editing = ref(false);
 
-    get fixtures(): Fixture[] {
-        return this.$store.state.fixtures; 
+function add(): void {
+    if (formGroup.value.name === '') {
+        return;
     }
+    store.groups.push(formGroup.value);
+    formGroup.value = new Group('');
+    store.persistState();
+}
 
-    addOrSave(): void {
-        if (this.editing) {
-            this.save();
-        } else {
-            this.add();
-        }
-    }
+function edit(group: Group): void {
+    formGroup.value = group;
+    editing.value = true;
+}
 
-    add(): void {
-        if (this.formGroup.name === '') {
-            return;
-        }
-        this.groups.push(this.formGroup);
-        this.formGroup = new Group('');
-        this.$store.dispatch('persistState');
-    }
+function save(): void {
+    formGroup.value = new Group('');
+    editing.value = false;
+    store.persistState();
+}
 
-    edit(group: Group): void {
-        this.formGroup = group;
-        this.editing = true;
-    }
+function remove(group: Group): void {
+    store.groups.splice(store.groups.indexOf(group), 1);
+    store.persistState();
+}
 
-    save(): void {
-        this.formGroup = new Group('');
-        this.editing = false;
-        this.$store.dispatch('persistState');
+function toggleMembership(group: Group, fixture: Fixture): void {
+    if (isFixtureInGroup(group, fixture)) {
+        group.members.splice(group.members.indexOf(fixture), 1);
+    } else {
+        group.members.push(fixture);
     }
+    store.setGroups(store.groups as Group[]);
+    store.persistState();
+}
 
-    remove(group: Group): void {
-        this.groups.splice(this.groups.indexOf(group), 1);
-        this.$store.dispatch('persistState');
-    }
-
-    toggleMembership(group: Group, fixture: Fixture): void {
-        if (this.isFixtureInGroup(group, fixture)) {
-            group.members.splice(group.members.indexOf(fixture), 1);
-        } else {
-            group.members.push(fixture);
-        }
-        this.$store.commit("setGroups", this.groups);
-        this.$store.dispatch('persistState');
-    }
-
-    isFixtureInGroup(group: Group, fixture: Fixture): boolean {
-        return group.members.includes(fixture);
-    }
+function isFixtureInGroup(group: Group, fixture: Fixture): boolean {
+    return group.members.includes(fixture);
 }
 </script>

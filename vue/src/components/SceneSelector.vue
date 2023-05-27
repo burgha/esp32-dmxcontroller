@@ -1,47 +1,26 @@
 <template>
     <div class="d-flex justify-center flex-wrap">
-        <Button 
-            v-for="scene in scenes"
-            :key="scene.name"
-            :title="scene.name"
-            :active="activeScene === scene"
-            @click.native="changeScene(scene)"
-        />
+        <Button v-for="scene in scenes" :key="scene.name" :title="scene.name" :active="false"
+            @click.native="changeScene(scene)" />
     </div>
 </template>
 
-<script lang="ts">
-import Vue from 'vue'
-import Component from 'vue-class-component'
-import { Prop } from 'vue-property-decorator'
+<script setup lang="ts">
+import { useDmxStore } from '@/stores/dmx'
 import Button from '@/components/Button.vue'
-import DMXControllable from '@/models/DMXControllable';
+import type DMXControllable from '@/models/DMXControllable';
 import Scene from '@/models/Scene';
 
-@Component({
-    components: {
-        Button
-    }
-})
-export default class SceneSelector extends Vue {
-    @Prop(Object) target: DMXControllable | undefined;
-    @Prop(Array) scenes: Scene[] | undefined;
-    
-    private activeScene: Scene | null = null;
+const store = useDmxStore()
+const props = defineProps<{
+    target: DMXControllable,
+    scenes: Scene[] | undefined;
+}>();
 
-    mounted() {
-        this.activeScene = this.$store.state.activeScene.get(this.target);
-    }
-
-    changeScene(newScene: Scene): void {
-        this.target?.activateScene(newScene);
-        this.activeScene = newScene;
-        this.$store.commit('setActiveScene', {target: this.target, scene: newScene});
-        this.$store.dispatch('sendDMXData');
-    }
+function changeScene(newScene: Scene): void {
+    props.target?.activateScene(newScene);
+    store.sendDMXData();
 }
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

@@ -1,85 +1,91 @@
 <template>
-    <v-app>
-        <v-main>
-            <router-view />
-            <div style="height: 60px; width: 100%" />
-        </v-main>
+  <v-app>
+    <v-main>
+      <RouterView />
+      <div style="height: 60px; width: 100%" />
+    </v-main>
 
-        <v-bottom-navigation id="nav">
-            <v-btn x-large to="/">
-                <span>Home</span>
-                <v-icon>mdi-home</v-icon>
-            </v-btn>
-            <v-btn x-large to="/settings">
-                <span>Settings</span>
-                <v-icon>mdi-cog</v-icon>
-            </v-btn>
-            <v-btn x-large to="/debug">
-                <span>Debug</span>
-                <v-icon>mdi-tune</v-icon>
-            </v-btn>
-        </v-bottom-navigation>
-
-        <v-snackbar v-model="snackbar" timeout="2000">
-            {{ snackbarText }}
-
-            <template v-slot:action="{ attrs }">
-                <v-btn
-                    color="pink"
-                    text
-                    v-bind="attrs"
-                    @click="snackbar = false"
-                >
-                    Close
-                </v-btn>
-            </template>
-        </v-snackbar>
-    </v-app>
+    <v-bottom-navigation id="nav">
+      <v-btn x-large to="/">
+        <span>Home</span>
+        <v-icon>mdi-home</v-icon>
+      </v-btn>
+      <v-btn x-large to="/settings">
+        <span>Settings</span>
+        <v-icon>mdi-cog</v-icon>
+      </v-btn>
+      <v-btn x-large to="/debug">
+        <span>Debug</span>
+        <v-icon>mdi-tune</v-icon>
+      </v-btn>
+    </v-bottom-navigation>
+  </v-app>
 </template>
 
-<script lang="ts">
-import Vue from 'vue'
-import Component from 'vue-class-component'
-
-@Component({})
-export default class App extends Vue {
-    snackbar = false;
-    snackbarText = '';
-
-    public showSnackbar(text: string) {
-        this.snackbarText = text;
-        this.snackbar = true;
-    }
-}
+<script setup lang="ts">
+import { RouterView } from 'vue-router'
 </script>
 
-
-<style>
-#app {
-    font-family: Avenir, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-align: center;
-    background: white;
+<style scoped>
+header {
+  line-height: 1.5;
+  max-height: 100vh;
 }
 
-#nav {
-    position: fixed;
-    overflow-x: scroll;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+.logo {
+  display: block;
+  margin: 0 auto 2rem;
 }
 
-#nav::-webkit-scrollbar {
-    display: none;
+nav {
+  width: 100%;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 2rem;
 }
 
-#nav a.router-link-exact-active {
-    color: #42b983;
+nav a.router-link-exact-active {
+  color: var(--color-text);
 }
 
-#nav .v-btn {
-    background-color: white;
+nav a.router-link-exact-active:hover {
+  background-color: transparent;
+}
+
+nav a {
+  display: inline-block;
+  padding: 0 1rem;
+  border-left: 1px solid var(--color-border);
+}
+
+nav a:first-of-type {
+  border: 0;
+}
+
+@media (min-width: 1024px) {
+  header {
+    display: flex;
+    place-items: center;
+    padding-right: calc(var(--section-gap) / 2);
+  }
+
+  .logo {
+    margin: 0 2rem 0 0;
+  }
+
+  header .wrapper {
+    display: flex;
+    place-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  nav {
+    text-align: left;
+    margin-left: -1rem;
+    font-size: 1rem;
+
+    padding: 1rem 0;
+    margin-top: 1rem;
+  }
 }
 </style>

@@ -377,6 +377,7 @@ void setup() {
     Serial.println(request->url());
     String url = request->url();
     dmxAutoLock = 10000;
+    delay(100);
     if (url == "/") {
       File file = SPIFFS.open("/index.html", "r");
       String data = file.readString();
@@ -405,8 +406,5 @@ void loop(){
   dmx_write_packet(dmxPort, dmxData, DMX_MAX_PACKET_SIZE);
   dmx_tx_packet(dmxPort);
   dmx_wait_tx_done(dmxPort, DMX_TX_PACKET_TOUT_TICK);
-  // if (DEBUG) {
-  //   Serial.println(esp_random());
-  // }
   delay(25);
 }

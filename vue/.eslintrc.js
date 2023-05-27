@@ -16,6 +16,7 @@ module.exports = {
             }
         }],
         "vue/singleline-html-element-content-newline": "off",
-        "no-undef": "off"
+        "no-undef": "off",
+        "@typescript-eslint/no-explicit-any": "off"
     }
 }

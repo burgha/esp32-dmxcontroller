@@ -15,13 +15,13 @@
                     </v-col>
                 </v-row>
             </v-container>
-            
+
             <div v-if="editing">
                 <h3>Controls</h3>
                 <div v-for="control in formFixture.controls" :key="control.name">
                     {{ control.name }}
-                    <v-btn class="ma-2" @click="editControl(control)">Edit</v-btn>
-                    <v-btn class="ma-2" @click="removeControl(control)">Delete</v-btn>
+                    <v-btn class="ma-2" @click="editControl(control as FixtureControl)">Edit</v-btn>
+                    <v-btn class="ma-2" @click="removeControl(control as FixtureControl)">Delete</v-btn>
                     <v-divider v-if="formFixture.controls.indexOf(control) < formFixture.controls.length - 1" />
                 </div>
                 <v-container>
@@ -32,14 +32,15 @@
                             <v-text-field v-model="formFixtureControl.config" label="Config">
                                 <template v-slot:append>
                                     <v-tooltip bottom>
-                                        <template v-slot:activator="{ on }">
-                                            <v-icon v-on="on">
-                                                mdi-help-circle-outline
-                                            </v-icon>
+                                        <template v-slot:activator="{ props }">
+                                            <v-icon v-bind="props" icon="mdi-help-circle-outline"/>
                                         </template>
-                                        <p v-if="formFixtureControl.type === FixtureControlType.Slider">Channel List (comma-separated)</p>
-                                        <p v-if="formFixtureControl.type === FixtureControlType.Colorpicker">Channel(R), Channel(G), Channel(B)</p>
-                                        <p v-if="formFixtureControl.type === FixtureControlType.Switch">Channel, On-Value, Off-Value</p>
+                                        <p v-if="formFixtureControl.type === FixtureControlType.Slider">Channel List
+                                            (comma-separated)</p>
+                                        <p v-if="formFixtureControl.type === FixtureControlType.Colorpicker">Channel(R),
+                                            Channel(G), Channel(B)</p>
+                                        <p v-if="formFixtureControl.type === FixtureControlType.Switch">Channel, On-Value,
+                                            Off-Value</p>
                                     </v-tooltip>
                                 </template>
                             </v-text-field>
@@ -53,107 +54,84 @@
             </div>
         </v-sheet>
 
-        <div v-for="fixture in fixtures" :key="fixture.name">
+        <div v-for="fixture in store.fixtures" :key="fixture.name">
             {{ fixture.name }} ({{ fixture.address }} - {{ Number(fixture.address) + Number(fixture.numChannels) }})
-            <v-btn class="ma-2" @click="edit(fixture)">Edit</v-btn>
-            <v-btn class="ma-2" @click="remove(fixture)">Delete</v-btn>
-            <v-divider v-if="fixtures.indexOf(fixture) < fixtures.length - 1" />
+            <v-btn class="ma-2" @click="edit(fixture as Fixture)">Edit</v-btn>
+            <v-btn class="ma-2" @click="remove(fixture as Fixture)">Delete</v-btn>
+            <v-divider v-if="store.fixtures.indexOf(fixture) < store.fixtures.length - 1" />
         </div>
     </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import Fixture from '@/models/Fixture';
 import FixtureControl from '@/models/FixtureControl';
 import { FixtureControlType } from '@/models/FixtureControl';
-import Scene from '@/models/Scene';
-import Vue from 'vue'
-import Component from 'vue-class-component'
+import { useDmxStore } from '@/stores/dmx';
+import { computed, ref } from 'vue';
 
-@Component({
-    components: {
+const store = useDmxStore();
+
+let formFixture = ref(new Fixture('', 0, 0));
+let editing = ref(false);
+
+let formFixtureControl = ref(new FixtureControl('', FixtureControlType.Slider));
+let editingFixtureControl = ref(false);
+
+const fixtureControlTypes = computed(() => {
+    return Object.keys(FixtureControlType).filter((x) => { return isNaN(parseInt(x, 10)) }).map((x: any) => {
+        return { title: x, value: FixtureControlType[x] }
+    });
+});
+
+function add(): void {
+    if (formFixture.value.name === '') {
+        return;
     }
-})
-export default class Fixtures extends Vue {
-    private FixtureControlType = FixtureControlType;
+    store.fixtures.push(formFixture.value);
+    formFixture.value = new Fixture('', 0, 0);
+    store.persistState();
+}
 
-    private formFixture = new Fixture('', 0, 0);
-    private editing = false;
+function edit(fixture: Fixture): void {
+    formFixture.value = fixture;
+    editing.value = true;
+}
 
-    private formFixtureControl = new FixtureControl('', FixtureControlType.Slider);
-    private editingFixtureControl = false;
+function save() {
+    store.persistState();
+    formFixture.value = new Fixture('', 0, 0);
+    editing.value = false;
+}
 
-    get fixtures(): Fixture[] {
-        return this.$store.state.fixtures; 
+function remove(fixture: Fixture): void {
+    store.fixtures.splice(store.fixtures.indexOf(fixture), 1);
+    store.persistState();
+}
+
+function addControl() {
+    if (formFixtureControl.value.name === '') {
+        return;
     }
+    store.persistState();
+    formFixture.value.controls.push(formFixtureControl.value);
+    formFixtureControl.value = new FixtureControl('', FixtureControlType.Slider);
+    editingFixtureControl.value = false;
+}
 
-    get scenes(): Scene[] {
-        return this.$store.state.scenes; 
-    }
+function editControl(control: FixtureControl) {
+    formFixtureControl.value = control;
+    editingFixtureControl.value = true;
+}
 
-    get fixtureControlTypes(): object[] {
-        return Object.keys(FixtureControlType).filter((x) => {return isNaN(parseInt(x, 10))}).map((x: any) => {
-            return {text: x, value: FixtureControlType[x]}
-        });
-    }
+function saveControl() {
+    store.persistState();
+    formFixtureControl.value = new FixtureControl('', FixtureControlType.Slider);
+    editingFixtureControl.value = false;
+}
 
-    addOrSave(): void {
-        if (this.editing) {
-            this.save();
-        } else {
-            this.add();
-        }
-    }
-
-    add(): void {
-        if (this.formFixture.name === '') {
-            return;
-        }
-        this.fixtures.push(this.formFixture);
-        this.formFixture = new Fixture('', 0, 0);
-        this.$store.dispatch('persistState');
-    }
-
-    edit(fixture: Fixture): void {
-        this.formFixture = fixture;
-        this.editing = true;
-    }
-
-    save() {
-        this.$store.dispatch('persistState');
-        this.formFixture = new Fixture('', 0, 0);
-        this.editing = false;
-    }
-
-    remove(fixture: Fixture): void {
-        this.fixtures.splice(this.fixtures.indexOf(fixture), 1);
-        this.$store.dispatch('persistState');
-    }
-
-    addControl() {
-        if (this.formFixtureControl.name === '') {
-            return;
-        }
-        this.$store.dispatch('persistState');
-        this.formFixture.controls.push(this.formFixtureControl);
-        this.formFixtureControl = new FixtureControl('', FixtureControlType.Slider);
-        this.editingFixtureControl = false;
-    }
-
-    editControl(control: FixtureControl) {
-        this.formFixtureControl = control;
-        this.editingFixtureControl = true;
-    }
-
-    saveControl() {
-        this.$store.dispatch('persistState');
-        this.formFixtureControl = new FixtureControl('', FixtureControlType.Slider);
-        this.editingFixtureControl = false;
-    }
-
-    removeControl(control: FixtureControl) {
-        this.formFixture.controls.splice(this.formFixture.controls.indexOf(control), 1);
-        this.$store.dispatch('persistState');
-    }
+function removeControl(control: FixtureControl) {
+    formFixture.value.controls.splice(formFixture.value.controls.indexOf(control), 1);
+    store.persistState();
 }
 </script>
