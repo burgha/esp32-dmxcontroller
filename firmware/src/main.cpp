@@ -2,37 +2,19 @@
 
 #include <SPIFFS.h>
 #include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-#include <esp_dmx.h>
 #include <ArduinoJson.h>
 #include <map>
 
+#include <DmxModule.h>
+#include <WebsocketModule.h>
+#include <HttpModule.h>
+
 bool DEBUG = true;
 
-int transmitPin = 23;
-int receivePin = 22;
-int enablePin = 21;
-
-dmx_port_t dmxPort = DMX_NUM_1;
-byte dmxData[DMX_MAX_PACKET_SIZE];
-int dmxAutoLock = 0;
-bool dmxManualLock = true;
-
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
-
-// Variable to store the HTTP request
-String header;
-
-// Current time
-unsigned long currentTime = millis();
-// Previous time
-unsigned long previousTime = 0; 
-// Define timeout time in milliseconds (example: 2000ms = 2s)
-const long timeoutTime = 2000;
-
-char wsBuffer[8192];
-int wsBufferLength = 0;
+DmxModule dmxModule = DmxModule();
+DmxModule* dmxPointer = &dmxModule;
+WebsocketModule websocketModule = WebsocketModule(dmxPointer);
+HttpModule httpModule = HttpModule(websocketModule, dmxPointer);
 
 DynamicJsonDocument settings(8192);
 
@@ -109,115 +91,12 @@ void setStartupScene() {
         for(JsonVariant cmd : cmds) {
           int channel = cmd["*c"].as<int>();
           int value = cmd["*v"].as<int>();
-          dmxData[channel] = value;
+          dmxModule.dmxData[channel] = value;
         }
         break;
       }
     }
   }
-}
-
-void handleWsEvent(char* payload, size_t len) {
-  if (DEBUG) {
-    Serial.println("Incoming WS Event:");
-    Serial.println(payload);
-  }
-  DynamicJsonDocument doc(8192);
-  deserializeJson(doc, payload);
-  const char* event = doc["event"].as<const char*>();
-  if (strcmp(event, "dmx") == 0) {
-    String arr = doc["data"].as<String>();
-    String last = "";
-    int channel = 0;
-    for(int i = 1; i < arr.length() - 1; i++) {
-      char c = arr[i];
-      if (c != ',') {
-        last += c;
-      } else {
-        if (dmxData[channel] != last.toInt() && DEBUG) {
-          Serial.print("Write DMX: ");
-          Serial.print(channel);
-          Serial.print(", ");
-          Serial.println(last.toInt());
-          dmxData[channel] = last.toInt();
-        }
-        last = "";
-        channel++;
-      }
-    }
-  } else if (strcmp(event, "settings") == 0) {
-    String settings = doc["data"].as<String>();
-    bool lockBefore = dmxManualLock;
-    dmxManualLock = true;
-    delay(100);
-    File file = SPIFFS.open("/settings.json", "w");
-    file.print(settings);
-    file.close();
-    delay(100);
-    dmxManualLock = lockBefore;
-  }
-}
-
-void handleWsMessage(void *arg, uint8_t *data, size_t len) {
-  AwsFrameInfo *info = (AwsFrameInfo*)arg;
-
-  if(info->index == 0 && info->num == 0) {
-    // message start
-    wsBufferLength = 0;
-  }
-  memcpy(&wsBuffer[info->index], data, len);
-  wsBufferLength += len;
-  if(info->final && info->index == 0 && info->len == len){
-    //the whole message is in a single frame and we got all of it's data
-    if(info->opcode == WS_TEXT){
-        char result[wsBufferLength];
-        strncpy(result, wsBuffer, wsBufferLength);
-        result[wsBufferLength-1] = '\0';
-        wsBufferLength = 0;
-        handleWsEvent(result, wsBufferLength);
-    }
-  } else {
-    //message is comprised of multiple frames or the frame is split into multiple packets
-    if((info->index + len) == info->len){
-      // frame end
-      if(info->final){
-        // message end
-        if(info->message_opcode == WS_TEXT) {
-          char result[wsBufferLength];
-          strncpy(result, wsBuffer, wsBufferLength);
-          result[wsBufferLength-1] = '\0';
-          wsBufferLength = 0;
-          handleWsEvent(result, wsBufferLength);
-        }
-      }
-    }
-  }
-}
-
-void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  switch (type) {
-    case WS_EVT_CONNECT:
-      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-      break;
-    case WS_EVT_DISCONNECT:
-      Serial.printf("WebSocket client #%u disconnected\n", client->id());
-      break;
-    case WS_EVT_DATA:
-      handleWsMessage(arg, data, len);
-      break;
-    case WS_EVT_PONG:
-    case WS_EVT_ERROR:
-      break;
-  }
-}
-
-void initWsClient() {
-  ws.onEvent(onWsEvent);
-}
-
-String getFileExtension(String filename) {
-  int dot = filename.lastIndexOf(".");
-  return filename.substring(dot);
 }
 
 void setup() {
@@ -229,18 +108,16 @@ void setup() {
     return;
   }
 
-  loadSettings();
+  dmxModule.setDebug(DEBUG);
+  httpModule.setDebug(DEBUG);
+  websocketModule.setDebug(DEBUG);
 
-  // Init DMX
-  const dmx_config_t config = DMX_DEFAULT_CONFIG;
-  dmx_param_config(dmxPort, &config);
-  dmx_set_pin(dmxPort, transmitPin, receivePin, enablePin);
-  QueueHandle_t dmx_queue;
-  dmx_driver_install(dmxPort, DMX_MAX_PACKET_SIZE, 10, &dmx_queue, ESP_INTR_FLAG_IRAM);
-  dmx_set_mode(dmxPort, DMX_MODE_TX);
+  loadSettings();
 
   setStartupScene();
   initWifi();
+<<<<<<< HEAD
+=======
   initWsClient();
 
   server.on("/api/settings", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -388,13 +265,18 @@ void setup() {
       request->send(SPIFFS, url, mime_type);
     }
   });
+>>>>>>> c1cc0655dbe009d2e00053f1832a09229a71eabb
 
   Serial.println("Init done");
-  server.begin();
-  dmxManualLock = false;
+  httpModule.startServer();
+  dmxModule.enableOutput();
 }
 
 void loop(){
+<<<<<<< HEAD
+  dmxModule.loop();
+  delay(20);
+=======
   if (dmxManualLock) {
     return;
   }
@@ -407,4 +289,5 @@ void loop(){
   dmx_tx_packet(dmxPort);
   dmx_wait_tx_done(dmxPort, DMX_TX_PACKET_TOUT_TICK);
   delay(25);
+>>>>>>> c1cc0655dbe009d2e00053f1832a09229a71eabb
 }
