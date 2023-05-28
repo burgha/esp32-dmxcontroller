@@ -23,6 +23,16 @@ const color = computed(() => {
     return rgb2Hex(props.fixture?.getDMXData(props.channels[0]), props.fixture?.getDMXData(props.channels[1]), props.fixture?.getDMXData(props.channels[2]));
 });
 
+const debounce = (fn: Function, ms = 300) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  return function (this: any, ...args: any[]) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), ms);
+  };
+};
+
+const debouncedUpdate = debounce(store.sendDMXData, 100);
+
 function rgb2Hex(r: number, g: number, b: number) {
     return '#' + [r, g, b].map(x => {
         const hex = x.toString(16)
@@ -48,7 +58,7 @@ function onUpdateColor(val: any): void {
         new DMXCommand(props.channels[1], val[1]),
         new DMXCommand(props.channels[2], val[2]),
     ]);
-    store.sendDMXData()
+    debouncedUpdate();
 }
 </script>
 

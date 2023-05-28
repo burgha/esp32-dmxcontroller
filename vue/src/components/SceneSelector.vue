@@ -1,6 +1,6 @@
 <template>
     <div class="d-flex justify-center flex-wrap">
-        <Button v-for="scene in scenes" :key="scene.name" :title="scene.name" :active="false"
+        <Button v-for="scene in scenes" :key="scene.name" :title="scene.name" :active="store.activeScene.get(target) === scene"
             @click.native="changeScene(scene)" />
     </div>
 </template>
@@ -19,6 +19,7 @@ const props = defineProps<{
 
 function changeScene(newScene: Scene): void {
     props.target?.activateScene(newScene);
+    store.activeScene.set(props.target, newScene);
     store.sendDMXData();
 }
 </script>

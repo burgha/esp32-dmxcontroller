@@ -11,7 +11,7 @@ class DmxModule {
         void setData(int channel, int value);
         void loop();
         void setDebug(bool flag);
-        byte dmxData[DMX_MAX_PACKET_SIZE];
+        uint8_t dmxData[DMX_MAX_PACKET_SIZE];
     private:
         bool debug;
         dmx_port_t dmxPort = DMX_NUM_1;

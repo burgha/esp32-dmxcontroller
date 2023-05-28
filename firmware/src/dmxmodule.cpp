@@ -12,12 +12,14 @@ DmxModule::DmxModule()
 
 void DmxModule::enableOutput()
 {
+    Serial.println("Enabling DMX");
     this->dmxManualLock = false;
 }
 
 void DmxModule::disableOutput()
 {
-    this->dmxManualLock = false;
+    Serial.println("Disabling DMX");
+    this->dmxManualLock = true;
 }
 
 bool DmxModule::getOutputState()

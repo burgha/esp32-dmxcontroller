@@ -55,10 +55,13 @@ export const useDmxStore = defineStore('dmx', {
             });(this);
         },
         sendDMXState() {
-            if (this.dmxEnabled) {
-                fetch(import.meta.env.VITE_APP_API_URL + '/enable', {method: "POST"});
+            if (this.config.useWebsockets) {
+                if(!WSService.getInstance().send('dmxState', this.dmxEnabled)) {
+                    //Fallback HTTP
+                    sendDMXStateHttp(this);
+                }
             } else {
-                fetch(import.meta.env.VITE_APP_API_URL + '/disable', {method: "POST"});
+                sendDMXStateHttp(this);
             }
         },
         setScenes(scenes: Scene[]) {
@@ -197,6 +200,14 @@ function sendDMXDataHTTP(store: any): void {
     });
     query = query.substring(0, query.length - 1); // remove last &
     fetch(import.meta.env.VITE_APP_API_URL + '/dmx?' + query, {method: "POST"});
+}
+
+function sendDMXStateHttp(store: any) {
+    if (store.$state.dmxEnabled) {
+        fetch(import.meta.env.VITE_APP_API_URL + '/enable', {method: "POST"});
+    } else {
+        fetch(import.meta.env.VITE_APP_API_URL + '/disable', {method: "POST"});
+    }
 }
 
 const compressionMap = new Map<string, string>([
