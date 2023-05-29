@@ -9,9 +9,9 @@
                     <div class="d-flex align-center justify-center">
                         <h4>{{ fixture.name }}</h4>
                         <v-btn v-if="fixtureSceneConfig[fixture.name][formScene.name]" click
-                            @click="copyCommands(fixture as Fixture, formScene as Scene)"><v-icon>mdi-content-copy</v-icon></v-btn>
+                            @click="copyCommands(fixture as Fixture, formScene as Scene)"><v-icon :icon="mdiContentCopy"></v-icon></v-btn>
                         <v-btn icon
-                            @click="pasteCommands(fixture as Fixture, formScene as Scene)"><v-icon>mdi-content-paste</v-icon></v-btn>
+                            @click="pasteCommands(fixture as Fixture, formScene as Scene)"><v-icon :icon="mdiContentPaste"></v-icon></v-btn>
                     </div>
                     <v-container v-if="fixtureSceneConfig[fixture.name]">
                         <v-row v-for="command in fixtureSceneConfig[fixture.name][formScene.name]"
@@ -53,6 +53,7 @@ import DMXCommand from '@/models/DMXCommand';
 import Fixture from '@/models/Fixture';
 import Scene from '@/models/Scene'
 import { useDmxStore } from '@/stores/dmx';
+import { mdiContentCopy, mdiContentPaste } from '@mdi/js';
 
 const store = useDmxStore();
 

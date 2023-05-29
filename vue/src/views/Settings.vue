@@ -1,6 +1,5 @@
 <template>
     <div class="settings">
-        <h1>Settings</h1>
         <v-tabs v-model="tab" bg-color="primary">
             <v-tab value="scenes">Scenes</v-tab>
             <v-tab value="groups">Groups</v-tab>
@@ -23,9 +22,18 @@
 
             <v-window-item value="config">
                 <v-sheet class="ma-4 pa-4" elevation="2">
-                    <h2>WiFi</h2>
-                    <v-text-field v-model="store.config.wifiCredentials.ssid" placeholder="SSID" />
-                    <v-text-field v-model="store.config.wifiCredentials.password" placeholder="Password" />
+                    <h2>WiFi-Mode</h2>
+                    <v-radio-group v-model="store.config.wifiMode">
+                        <v-radio label="Access-Point" :value="WiFiMode.AccessPoint" :true-icon="mdiRadioboxMarked" :false-icon="mdiRadioboxBlank"></v-radio>
+                        <v-radio label="Client" :value="WiFiMode.Station" :true-icon="mdiRadioboxMarked" :false-icon="mdiRadioboxBlank"></v-radio>
+                    </v-radio-group>
+                    <div v-if="store.config.wifiMode === WiFiMode.AccessPoint">
+                        <v-text-field v-model="store.config.apSSID" placeholder="SSID" />
+                    </div>
+                    <div v-if="store.config.wifiMode === WiFiMode.Station">
+                        <v-text-field v-model="store.config.wifiCredentials.ssid" placeholder="SSID" />
+                        <v-text-field v-model="store.config.wifiCredentials.password" placeholder="Password" />
+                    </div>
                 </v-sheet>
                 <v-sheet class="ma-4 pa-4" elevation="2">
                     <h2>Startup</h2>
@@ -55,8 +63,10 @@
 import Scenes from '@/components/Config/Scenes.vue'
 import Groups from '@/components/Config/Groups.vue'
 import Fixtures from '@/components/Config/Fixtures.vue'
-import { ref, type Ref } from 'vue';
-import { useDmxStore } from '@/stores/dmx';
+import { ref, type Ref } from 'vue'
+import { useDmxStore } from '@/stores/dmx'
+import { WiFiMode } from '@/models/WiFiMode'
+import { mdiRadioboxBlank, mdiRadioboxMarked } from '@mdi/js'
 
 const store = useDmxStore();
 

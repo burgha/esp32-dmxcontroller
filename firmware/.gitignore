@@ -4,6 +4,7 @@
 .vscode/launch.json
 .vscode/ipch
 
-data
+data/*
+!data/settings.default.json
 
 include/wifi_credentials.h

@@ -8,15 +8,15 @@
     <v-bottom-navigation id="nav">
       <v-btn x-large to="/">
         <span>Home</span>
-        <v-icon>mdi-home</v-icon>
+        <v-icon :icon="mdiHome"></v-icon>
       </v-btn>
       <v-btn x-large to="/settings">
         <span>Settings</span>
-        <v-icon>mdi-cog</v-icon>
+        <v-icon :icon="mdiCog"></v-icon>
       </v-btn>
       <v-btn x-large to="/debug">
         <span>Debug</span>
-        <v-icon>mdi-tune</v-icon>
+        <v-icon :icon="mdiTune"></v-icon>
       </v-btn>
     </v-bottom-navigation>
   </v-app>
@@ -24,6 +24,7 @@
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import { mdiHome, mdiCog, mdiTune } from '@mdi/js'
 </script>
 
 <style scoped>

@@ -119,18 +119,18 @@ export const useDmxStore = defineStore('dmx', {
             let json = JSON.stringify(data);
             
             // Compression
-            compressionMap.forEach((val: string, key: string) => {
-                json = json.replaceAll(key, val);
-            });
+            // compressionMap.forEach((val: string, key: string) => {
+            //     json = json.replaceAll(key, val);
+            // });
             return json;
         },
         importObjectIntoStore(data: any) {
             // Decompression
-            data = JSON.stringify(data);
-            compressionMap.forEach((val: string, key: string) => {
-                data = data.replaceAll(val, key);
-            });
-            data = JSON.parse(data);
+            // data = JSON.stringify(data);
+            // compressionMap.forEach((val: string, key: string) => {
+            //     data = data.replaceAll(val, key);
+            // });
+            // data = JSON.parse(data);
         
             const scenes: Scene[] = [];
             data.scenes?.forEach((e: any) => {
