@@ -2,22 +2,21 @@
 
 DmxModule::DmxModule()
 {
-    int transmitPin = 23;
-    int receivePin = 22;
-    int enablePin = 21;
-
+    dmx_config_t config = DMX_CONFIG_DEFAULT;
+    dmx_driver_install(dmxPort, &config, DMX_INTR_FLAGS_DEFAULT);
     dmx_set_pin(dmxPort, transmitPin, receivePin, enablePin);
-    dmx_driver_install(dmxPort, DMX_DEFAULT_INTR_FLAGS);
 }
 
 void DmxModule::enableOutput()
 {
+    Serial.println("Enabling DMX");
     this->dmxManualLock = false;
 }
 
 void DmxModule::disableOutput()
 {
-    this->dmxManualLock = false;
+    Serial.println("Disabling DMX");
+    this->dmxManualLock = true;
 }
 
 bool DmxModule::getOutputState()

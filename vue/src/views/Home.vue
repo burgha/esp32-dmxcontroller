@@ -1,6 +1,5 @@
 <template>
     <div class="home">
-        <h1>Home</h1>
         <div class="ma-4">
             <v-switch class="" label="Enable DMX" v-model="store.dmxEnabled" @change="onChangeDMXEnabled()" />
         </div>
@@ -53,5 +52,6 @@ const store = useDmxStore();
 
 function onChangeDMXEnabled(): void {
     store.sendDMXState();
+    store.persistState();
 }
 </script>

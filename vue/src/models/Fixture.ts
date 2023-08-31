@@ -5,7 +5,7 @@ import FixtureControl from "./FixtureControl";
 import { useDmxStore } from "@/stores/dmx";
 
 export default class Fixture implements DMXControllable {
-    constructor(name: string, address: number, numChannels: number, sceneConfig: Map<Scene, DMXCommand[]> = new Map(), controls: FixtureControl[] = []) {
+    constructor(name: string, address: number, numChannels: number, sceneConfig: Map<string, DMXCommand[]> = new Map(), controls: FixtureControl[] = []) {
         this._name = name;
         this._address = address;
         this._numChannels = numChannels;
@@ -43,13 +43,13 @@ export default class Fixture implements DMXControllable {
         this._numChannels = v;
     }
 
-    private _sceneConfig: Map<Scene, DMXCommand[]>;
+    private _sceneConfig: Map<string, DMXCommand[]>;
     
-    public get sceneConfig(): Map<Scene, DMXCommand[]> {
+    public get sceneConfig(): Map<string, DMXCommand[]> {
         return this._sceneConfig;
     }
 
-    public set sceneConfig(v: Map<Scene, DMXCommand[]>) {
+    public set sceneConfig(v: Map<string, DMXCommand[]>) {
         this._sceneConfig = v;
     }
 
@@ -64,11 +64,11 @@ export default class Fixture implements DMXControllable {
     }
 
     public setSceneConfig(scene: Scene, commands: DMXCommand[]): void {
-        this._sceneConfig.set(scene, commands);
+        this._sceneConfig.set(scene.name, commands);
     }
 
     public activateScene(scene: Scene): boolean {
-        const commands = this.sceneConfig.get(scene);
+        const commands = this.sceneConfig.get(scene.name) ?? [];
         if (commands === undefined) {
             return false
         }

@@ -19,25 +19,32 @@ HttpModule httpModule = HttpModule(websocketModule, dmxPointer);
 DynamicJsonDocument settings(8192);
 
 void loadSettings() {
-  if (SPIFFS.exists("/settings.json")) {
-    File file = SPIFFS.open("/settings.json", "r");
-    String json = file.readString();
-    file.close();
+  File file;
+  if (!SPIFFS.exists("/settings.json")) {
+    File defaults = SPIFFS.open("/settings.default.json", "r");
+    String jsonDefaults = defaults.readString();
+    file = SPIFFS.open("/settings.json", "w+");
+    file.print(jsonDefaults);
+  } else {
+    file = SPIFFS.open("/settings.json", "r");
+  }
+  String json = file.readString();
+  file.close();
 
-    deserializeJson(settings, json);
+  deserializeJson(settings, json);
 
-    if (DEBUG) {
-      Serial.println(settings.as<String>());
-    }
+  if (DEBUG) {
+    Serial.println(settings.as<String>());
   }
 }
 
-void createWifi() {
-  Serial.println("\nCreating WiFi Network");
-  WiFi.softAP("ESP32-DMX");
+void createWifi(String ssid = "ESP32-DMX") {
+  Serial.print("\nCreating WiFi Network ");
+  Serial.println(ssid);
+  WiFi.softAP(ssid);
 }
 
-void connectWifi(String ssid, String password) {
+boolean connectWifi(String ssid, String password) {
   // Connect to Wi-Fi network with SSID and password
   Serial.print("Connecting to ");
   Serial.println(ssid);
@@ -46,8 +53,7 @@ void connectWifi(String ssid, String password) {
   while (WiFi.status() != WL_CONNECTED) {
     if (tries == 50) {
       WiFi.disconnect();
-      createWifi();
-      return;
+      return false;
     }
     delay(500);
     Serial.print(".");
@@ -59,38 +65,43 @@ void connectWifi(String ssid, String password) {
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+
+  return true;
 }
 
 void initWifi() {
   if (!SPIFFS.exists("/settings.json")) {
-    createWifi();
-    return;
+    createWifi("ESP32-DMX");
   }
-  // *w = _wifiCredentials, *ss = _ssid, *p = _password
-  String ssid = settings["config"]["*w"]["*ss"].as<String>();
-  String password = settings["config"]["*w"]["*p"].as<String>();
+  int wifiMode = settings["config"]["_wifiMode"].as<int>();
+  String apSsid = settings["config"]["_apSSID"].as<String>();
 
-  Serial.println(ssid);
+  String ssid = settings["config"]["_wifiCredentials"]["_ssid"].as<String>();
+  String password = settings["config"]["_wifiCredentials"]["_password"].as<String>();
 
-  if (ssid != "" && password != "") {
-    connectWifi(ssid, password);
-    return;
+  if (wifiMode == 0 && ssid != "" && password != "") {
+    if (!connectWifi(ssid, password)) {
+      createWifi(apSsid);
+    }
   } else {
-    createWifi();
+    createWifi(apSsid);
   }
 }
 
 void setStartupScene() {
-  String startupScene = settings["config"]["*sSc"].as<String>();
-  JsonArray fixtures = settings["*fs"].as<JsonArray>();
+  String startupScene = settings["config"]["_startupScene"].as<String>();
+  JsonArray fixtures = settings["fixtures"].as<JsonArray>();
   for(JsonVariant f : fixtures) {
-    JsonArray sceneConfig = f["*sC"].as<JsonArray>();
-    for(JsonVariant sc : sceneConfig) {
-      if (sc["*s"].as<String>() == startupScene) {
-        JsonArray cmds = sc["*cs"].as<JsonArray>();
+    JsonVariant sceneConfig = f["_sceneConfig"];
+    JsonArray sceneMap = sceneConfig["value"].as<JsonArray>();
+    for(JsonVariant sc : sceneMap) {
+      if (sc[0].as<String>() == startupScene) {
+        Serial.print("Setting Startup Scene: ");
+        Serial.println(startupScene);
+        JsonArray cmds = sc[1].as<JsonArray>();
         for(JsonVariant cmd : cmds) {
-          int channel = cmd["*c"].as<int>();
-          int value = cmd["*v"].as<int>();
+          int channel = cmd["_channel"].as<int>();
+          int value = cmd["_value"].as<int>();
           dmxModule.dmxData[channel] = value;
         }
         break;
@@ -118,8 +129,8 @@ void setup() {
   initWifi();
 
   Serial.println("Init done");
-  httpModule.startServer();
   dmxModule.enableOutput();
+  httpModule.startServer();
 }
 
 void loop(){

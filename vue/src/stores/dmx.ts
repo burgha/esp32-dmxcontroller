@@ -1,19 +1,23 @@
-import DMXCommand from '@/models/DMXCommand'
 import Fixture from '@/models/Fixture'
 import Group from '@/models/Group'
 import Scene from '@/models/Scene'
 import Config from '@/models/Config'
-import WifiCredentials from '@/models/WifiCredentials'
-import FixtureControl from '@/models/FixtureControl'
+import Animation from '@/models/Animation'
 import type DMXControllable from '@/models/DMXControllable'
 import WSService from '@/services/WSService'
 import { defineStore } from 'pinia'
+import FixtureControl from '@/models/FixtureControl'
+import DMXCommand from '@/models/DMXCommand'
+import { debounce } from '@/utils/debounce'
+
+let persistStateDebouncedHandler: Function;
 
 export const useDmxStore = defineStore('dmx', {
     state: () => ({
         scenes: [] as Scene[],
         groups: [] as Group[],
         fixtures: [] as Fixture[],
+        animations: [] as Animation[],
         config: new Config(),
         dmxData: new Array(513).fill(0),
         dmxEnabled: true,
@@ -22,7 +26,7 @@ export const useDmxStore = defineStore('dmx', {
     actions: {
         async persistState() {
             if (this.config.useWebsockets) {
-                if(!WSService.getInstance().send('settings', await this.convertStateToJson())) {
+                if (!WSService.getInstance().send('settings', this.convertStateToJson())) {
                     //Fallback HTTP
                     await sendConfigHTTP(this);
                 }
@@ -30,35 +34,104 @@ export const useDmxStore = defineStore('dmx', {
                 await sendConfigHTTP(this);
             }
         },
-        loadSettings() {
-            fetch(import.meta.env.VITE_APP_API_URL + "/settings").then(res => {
-                res.json().then(data => {
-                    this.importObjectIntoStore(data);
-                })
+        async persistStateDebounced() {
+            if (!persistStateDebouncedHandler) {
+                persistStateDebouncedHandler = debounce(this.persistState, 2000);
+            }
+            persistStateDebouncedHandler();
+        },
+        loadSettings(): Promise<void> {
+            function deserializeFixtureControl(x: any) {
+                return new FixtureControl(x._name, x._type, x._config);
+            }
+
+            function deserializeDmxCommand(x: any) {
+                return new DMXCommand(x._channel, x._value);
+            }
+
+            function deserializeFixture(x: any) {
+                const map = new Map();
+                x._sceneConfig.forEach((val: any, key: string) => {
+                    map.set(key, val.map((c: any) => deserializeDmxCommand(c)));
+                });
+                return new Fixture(x._name, x._address, x._numChannels, map, x._controls?.map((c: any) => deserializeFixtureControl(c)) ?? []);
+            }
+
+            function deserializeGroup(x: any, fixtures: Fixture[]) {
+                return new Group(x._name, x._members?.map((m: any) => fixtures.find(x => x.name === m._name)) ?? []);
+            }
+
+            function deserializeScene(x: any) {
+                return new Scene(x._name);
+            }
+
+            function deserializeAnimation(x: any) {
+                return new Animation(x._name, x._group);
+            }
+
+            function reviver(this: any, key: any, value: any) {
+                if (typeof value === 'object' && value !== null) {
+                    if (value.dataType === 'Map') {
+                        return new Map(value.value);
+                    }
+                }
+                return value;
+            }
+
+            return new Promise((resolve, reject) => {
+                fetch(import.meta.env.VITE_APP_API_URL + "/settings").then(res => res.text()).then((text) => {
+                    const data = JSON.parse(text, reviver);
+                    
+                    data.scenes = data.scenes?.map((x: any) => deserializeScene(x)) ?? [];
+                    data.fixtures = data.fixtures?.map((x: any) => deserializeFixture(x)) ?? [];
+                    data.groups = data.groups?.map((x: any) => deserializeGroup(x, data.fixtures)) ?? [];
+                    data.animations = data.animations?.map((x: any) => deserializeAnimation(x)) ?? [];
+                    
+                    const map = new Map();
+                    data.activeScene?.forEach((value: DMXControllable, key: Scene) => {
+                        key = [...data.fixtures, ...data.groups].find((c: Fixture | Group) => c.name === (key as any)._name);
+                        value = data.scenes.find((s: Scene) => s.name === (value as any)._name);
+                        map.set(key, value);
+                    });
+                    data.activeScene = map;
+
+                    data.dmxEnabled = true; // Unabhängig von Settings nach boot immer aktiv
+
+                    this.$patch(data);
+                    console.log("Loaded Settings", data);
+                    
+                    resolve();
+                }).catch(() => {
+                    reject();
+                });
             });
         },
         sendDMXData() {
             if (this.config.useWebsockets) {
-                if(!WSService.getInstance().send('dmx', JSON.stringify(this.dmxData))) {
+                if (!WSService.getInstance().send('dmx', JSON.stringify(this.dmxData))) {
                     //Fallback HTTP
                     sendDMXDataHTTP(this);
                 }
             } else {
                 sendDMXDataHTTP(this);
             }
+            this.persistStateDebounced();
         },
         getDMXData() {
             fetch(import.meta.env.VITE_APP_API_URL + "/dmx").then(res => res.json()).then(d => {
                 d.forEach((value: number, index: number) => {
                     this.setDMXData(index, value);
                 });
-            });(this);
+            }); (this);
         },
         sendDMXState() {
-            if (this.dmxEnabled) {
-                fetch(import.meta.env.VITE_APP_API_URL + '/enable', {method: "POST"});
+            if (this.config.useWebsockets) {
+                if (!WSService.getInstance().send('dmxState', this.dmxEnabled)) {
+                    //Fallback HTTP
+                    sendDMXStateHttp(this);
+                }
             } else {
-                fetch(import.meta.env.VITE_APP_API_URL + '/disable', {method: "POST"});
+                sendDMXStateHttp(this);
             }
         },
         setScenes(scenes: Scene[]) {
@@ -82,101 +155,20 @@ export const useDmxStore = defineStore('dmx', {
         setActiveScene(target: DMXControllable, scene: Scene) {
             this.activeScene.set(target, scene);
         },
-        async convertStateToJson(): Promise<string> {
-            let data = {
-                scenes: await this.scenes,
-                groups: await this.groups,
-                fixtures: await this.fixtures,
-                config: await this.config
+        convertStateToJson(): string {
+            function replacer(this: any, key: any, value: any) {
+                if (value instanceof Map) {
+                    return {
+                        dataType: 'Map',
+                        value: Array.from(value.entries()),
+                    };
+                } else {
+                    return value;
+                }
             }
-            data = JSON.parse(JSON.stringify(data));
-        
-            data.groups = data.groups.map((g: any) => {
-                return {
-                    ...g,
-                    _members: g._members.map((f: any) => {return {_name: f._name}})
-                }
-            });
-        
-            const fixtures = data.fixtures;
-            fixtures.forEach((fixture: any) => {
-                fixture._sceneConfig = [];
-                const f = this.fixtures.find(x => x.name === fixture._name);
-                if (f) {
-                    f.sceneConfig.forEach((val: DMXCommand[], key: Scene) => {
-                        fixture._sceneConfig.push({
-                            _scene: key.name,
-                            _commands: val
-                        });
-                    });
-                }
-            });
-            data.fixtures = fixtures;
-        
-            let json = JSON.stringify(data);
             
-            // Compression
-            compressionMap.forEach((val: string, key: string) => {
-                json = json.replaceAll(key, val);
-            });
-            return json;
+            return JSON.stringify(this.$state, replacer);
         },
-        importObjectIntoStore(data: any) {
-            // Decompression
-            data = JSON.stringify(data);
-            compressionMap.forEach((val: string, key: string) => {
-                data = data.replaceAll(val, key);
-            });
-            data = JSON.parse(data);
-        
-            const scenes: Scene[] = [];
-            data.scenes?.forEach((e: any) => {
-                scenes.push(new Scene(e._name));
-            });
-            this.setScenes(scenes);
-        
-            const fixtures: Fixture[] = [];
-            data.fixtures?.forEach((e: any) => {
-                const sceneConfig: Map<Scene, DMXCommand[]> = new Map();
-                e._sceneConfig?.forEach((c: any) => {
-                    const scene = this.scenes.find(s => s.name === c._scene);
-                    if (scene === undefined) {
-                        return;
-                    }
-                    const commands: DMXCommand[] = [];
-                    c._commands?.forEach((command: any) => {
-                        commands.push(new DMXCommand(command._channel, command._value));
-                    });
-                    sceneConfig.set(scene as Scene, commands);
-                });
-                const controls: FixtureControl[] = [];
-                e._controls?.forEach((control: any) => {
-                    controls.push(new FixtureControl(control._name, control._type, control._config));
-                });
-                fixtures.push(new Fixture(e._name, e._address, e._numChannels, sceneConfig, controls));
-            });
-            this.setFixtures(fixtures);
-        
-            const groups: Group[] = [];
-            data.groups?.forEach((e: any) => {
-                const members: Fixture[] = [];
-                e._members.forEach((m: any) => {
-                    const fixture = this.fixtures.find(f => f.name === m._name);
-                    if (fixture === undefined) {
-                        return;
-                    }
-                    members.push(fixture as Fixture);
-                });
-                groups.push(new Group(e._name, members));
-            });
-            this.setGroups(groups);
-        
-            const config = new Config();
-            config.wifiCredentials = new WifiCredentials(data.config._wifiCredentials._ssid, data.config._wifiCredentials._password);
-            config.useWebsockets = data.config._useWebsockets;
-            config.startupScene = data.config._startupScene;
-            this.setConfig(config);
-        }
     },
 });
 
@@ -196,29 +188,13 @@ function sendDMXDataHTTP(store: any): void {
         query += channel + "=" + value + "&";
     });
     query = query.substring(0, query.length - 1); // remove last &
-    fetch(import.meta.env.VITE_APP_API_URL + '/dmx?' + query, {method: "POST"});
+    fetch(import.meta.env.VITE_APP_API_URL + '/dmx?' + query, { method: "POST" });
 }
 
-const compressionMap = new Map<string, string>([
-    ['"fixtures"', '"*fs"'],
-    ['"scenes"', '"*scs"'],
-    ['"groups"', '"*gs"'],
-    ['"_name"', '"*n"'],
-    ['"_scene"', '"*s"'],
-    ['"_channel"', '"*c"'],
-    ['"_command"', '"*co"'],
-    ['"_commands"', '"*cs"'],
-    ['"_value"', '"*v"'],
-    ['"_address"', '"*a"'],
-    ['"_numChannels"', '"*nC"'],
-    ['"_sceneConfig"', '"*sC"'],
-    ['"_wifiCredentials"', '"*w"'],
-    ['"_ssid"', '"*ss"'],
-    ['"_password"', '"*p"'],
-    ['"_controls"', '"*cts"'],
-    ['"_type"', '"*t"'],
-    ['"_members"', '"*m"'],
-    ['"_config"', '"*cf"'],
-    ['"_useWebsockets"', '"*uW"'],
-    ['"_startupScene"', '"*sSc"'],
-]);
+function sendDMXStateHttp(store: any) {
+    if (store.$state.dmxEnabled) {
+        fetch(import.meta.env.VITE_APP_API_URL + '/enable', { method: "POST" });
+    } else {
+        fetch(import.meta.env.VITE_APP_API_URL + '/disable', { method: "POST" });
+    }
+}

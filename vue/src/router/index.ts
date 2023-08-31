@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Home from '@/views/Home.vue';
+import Groups from '@/views/Groups.vue';
 import Settings from '@/views/Settings.vue';
 import Debug from '@/views/Debug.vue';
 import { useDmxStore } from '@/stores/dmx';
@@ -14,6 +15,16 @@ const routes: Array<RouteRecordRaw> = [
             next();
         },
         component: Home
+    },
+    {
+        path: '/groups',
+        name: 'Groups',
+        beforeEnter: (to, from, next) => {
+            const store = useDmxStore();
+            store.setDMXEnabled(true);
+            next();
+        },
+        component: Groups
     },
     {
         path: '/settings',

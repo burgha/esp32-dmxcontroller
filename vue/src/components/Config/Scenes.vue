@@ -8,23 +8,24 @@
                 <div v-for="fixture in store.fixtures" :key="fixture.name" class="my-5">
                     <div class="d-flex align-center justify-center">
                         <h4>{{ fixture.name }}</h4>
-                        <v-btn v-if="fixtureSceneConfig[fixture.name][formScene.name]" click
-                            @click="copyCommands(fixture as Fixture, formScene as Scene)"><v-icon>mdi-content-copy</v-icon></v-btn>
-                        <v-btn icon
-                            @click="pasteCommands(fixture as Fixture, formScene as Scene)"><v-icon>mdi-content-paste</v-icon></v-btn>
+                        <v-btn v-if="fixture.sceneConfig.get(formScene.name)" click
+                            @click="copyCommands(fixture as Fixture, formScene as Scene)"><v-icon
+                                :icon="mdiContentCopy"></v-icon></v-btn>
+                        <v-btn icon @click="pasteCommands(fixture as Fixture, formScene as Scene)"><v-icon
+                                :icon="mdiContentPaste"></v-icon></v-btn>
                     </div>
-                    <v-container v-if="fixtureSceneConfig[fixture.name]">
-                        <v-row v-for="command in fixtureSceneConfig[fixture.name][formScene.name]"
-                            :key="command[0] + Math.random()">
+                    <v-container v-if="fixture.sceneConfig">
+                        <v-row v-for="command in fixture.sceneConfig.get(formScene.name)"
+                            :key="command.channel">
                             <v-col cols="4">
-                                <v-text-field v-model.number="command[0]" placeholder="Address" />
+                                <v-text-field v-model.number="command.channel" placeholder="Address" />
                             </v-col>
                             <v-col cols="4">
-                                <v-text-field v-model.number="command[1]" placeholder="Value" />
+                                <v-text-field v-model.number="command.value" placeholder="Value" />
                             </v-col>
                             <v-col cols="4">
                                 <v-btn
-                                    @click="deleteCommandFromFixtureSceneConfig(fixture as Fixture, formScene as Scene, fixtureSceneConfig[fixture.name][formScene.name].indexOf(command))">
+                                    @click="deleteCommandFromFixtureSceneConfig(fixture as Fixture, formScene as Scene, fixture.sceneConfig.get(formScene.name)!.indexOf(command))">
                                     Delete Command
                                 </v-btn>
                             </v-col>
@@ -53,50 +54,41 @@ import DMXCommand from '@/models/DMXCommand';
 import Fixture from '@/models/Fixture';
 import Scene from '@/models/Scene'
 import { useDmxStore } from '@/stores/dmx';
+import { mdiContentCopy, mdiContentPaste } from '@mdi/js';
 
 const store = useDmxStore();
 
 let formScene = ref(new Scene(''));
 let editing = ref(false);
-let fixtureSceneConfig = ref<any>({})
-let commandClipboard: [] = [];
-
-function generateFixtureSceneConfig() {
-    store.fixtures.forEach(fixture => {
-        const obj: any = {}
-        store.scenes.forEach(scene => {
-            obj[scene.name] = fixture.sceneConfig.get(scene as Scene)?.map((c: DMXCommand) => {
-                return [c.channel, c.value];
-            });
-        });
-        fixtureSceneConfig.value[fixture.name] = obj;
-    });
-}
+let commandClipboard: DMXCommand[] = [];
 
 function addCommandToFixtureSceneConfig(fixture: Fixture, scene: Scene): void {
-    if (fixtureSceneConfig.value[fixture.name][scene.name] === undefined) {
-        fixtureSceneConfig.value[fixture.name][scene.name] = [];
+    if (!fixture.sceneConfig.has(scene.name)) {
+        fixture.sceneConfig.set(scene.name, []);
     }
-    fixtureSceneConfig.value[fixture.name][scene.name].push([null, null]);
+    fixture.sceneConfig.get(scene.name)?.push(new DMXCommand(0, 0));
     const instance = getCurrentInstance();
     instance?.proxy?.$forceUpdate();
 }
 
 function deleteCommandFromFixtureSceneConfig(fixture: Fixture, scene: Scene, index: number): void {
-    fixtureSceneConfig.value[fixture.name][scene.name].splice(index, 1);
+    fixture.sceneConfig.get(scene.name)?.splice(index, 1);
     const instance = getCurrentInstance();
     instance?.proxy?.$forceUpdate();
 }
 
 function copyCommands(fixture: Fixture, scene: Scene): void {
-    commandClipboard = fixtureSceneConfig.value[fixture.name][scene.name];
+    commandClipboard = fixture.sceneConfig.get(scene.name) ?? [];
 }
 
 function pasteCommands(fixture: Fixture, scene: Scene): void {
     if (commandClipboard.length === 0) {
         return;
     }
-    fixtureSceneConfig.value[fixture.name][scene.name] = commandClipboard.map(x => [x[0], x[1]]);
+    if (fixture.sceneConfig.get(scene.name) === undefined) {
+        fixture.sceneConfig.set(scene.name, []);
+    }
+    fixture.sceneConfig.get(scene.name)?.push(...commandClipboard.map(x => new DMXCommand(x.channel, x.value)));
     const instance = getCurrentInstance();
     instance?.proxy?.$forceUpdate();
 }
@@ -107,35 +99,18 @@ function add(): void {
     }
     store.scenes.push(formScene.value);
     formScene.value = new Scene('');
-    generateFixtureSceneConfig();
     store.persistState();
 }
 
 function edit(scene: Scene): void {
-    generateFixtureSceneConfig();
     formScene.value = scene;
     editing.value = true;
 }
 
 function save(): void {
-    store.fixtures.forEach(fixture => {
-        store.scenes.forEach(scene => {
-            let dmxcommands = fixtureSceneConfig.value[fixture.name][scene.name] ?? [];
-
-            dmxcommands = dmxcommands.filter((c: any[]) => {
-                return Number.isInteger(c[0]) && Number.isInteger(c[1])
-            });
-
-            fixture.sceneConfig.delete(scene as Scene);
-            fixture.sceneConfig.set(scene as Scene, dmxcommands.map((c: any[]) => {
-                return new DMXCommand(c[0], c[1]);
-            }));
-        });
-
-    });
     formScene.value = new Scene('');
     editing.value = false;
-    generateFixtureSceneConfig();
+
     store.persistState();
 }
 

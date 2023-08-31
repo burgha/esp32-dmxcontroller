@@ -1,22 +1,35 @@
 <template>
   <v-app>
+    
     <v-main>
-      <RouterView />
-      <div style="height: 60px; width: 100%" />
+      <div v-if="errorDuringLoading" class="d-flex justify-center align-center flex-column" style="height: 100%;">
+        <v-icon :icon="mdiAlert" size="92"></v-icon>
+        <p>Could not connect to Controller</p>
+      </div>
+      <div v-else-if="!settingsLoaded" class="d-flex justify-center align-center" style="height: 100%;">
+        <v-progress-circular indeterminate :size="92"></v-progress-circular>
+      </div>
+      <div v-else="settingsLoaded">
+        <RouterView />
+      </div>
     </v-main>
 
     <v-bottom-navigation id="nav">
       <v-btn x-large to="/">
         <span>Home</span>
-        <v-icon>mdi-home</v-icon>
+        <v-icon :icon="mdiHome"></v-icon>
+      </v-btn>
+      <v-btn x-large to="/groups">
+        <span>Groups</span>
+        <v-icon :icon="mdiCog"></v-icon>
       </v-btn>
       <v-btn x-large to="/settings">
         <span>Settings</span>
-        <v-icon>mdi-cog</v-icon>
+        <v-icon :icon="mdiCog"></v-icon>
       </v-btn>
       <v-btn x-large to="/debug">
         <span>Debug</span>
-        <v-icon>mdi-tune</v-icon>
+        <v-icon :icon="mdiTune"></v-icon>
       </v-btn>
     </v-bottom-navigation>
   </v-app>
@@ -24,6 +37,19 @@
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import { mdiHome, mdiCog, mdiTune, mdiAlert } from '@mdi/js'
+import { ref } from 'vue';
+import { useDmxStore } from './stores/dmx';
+
+let settingsLoaded = ref(false);
+let errorDuringLoading = ref(false);
+
+const store = useDmxStore();
+store.loadSettings().then(() => {
+  settingsLoaded.value = true;
+}).catch(() => {
+  errorDuringLoading.value = true;
+});
 </script>
 
 <style scoped>

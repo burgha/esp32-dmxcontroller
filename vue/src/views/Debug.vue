@@ -1,7 +1,5 @@
 <template>
     <div class="debug">
-        <h1>Debug</h1>
-
         <v-sheet class="ma-4 pa-4" elevation="2">
             <h2>Manual DMX Commands</h2>
             <v-select v-model="selectedFixture" :items="store.fixtures" item-title="name" :return-object="true"

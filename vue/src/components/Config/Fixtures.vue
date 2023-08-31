@@ -33,7 +33,7 @@
                                 <template v-slot:append>
                                     <v-tooltip bottom>
                                         <template v-slot:activator="{ props }">
-                                            <v-icon v-bind="props" icon="mdi-help-circle-outline"/>
+                                            <v-icon v-bind="props" :icon="mdiHelpCircleOutline"/>
                                         </template>
                                         <p v-if="formFixtureControl.type === FixtureControlType.Slider">Channel List
                                             (comma-separated)</p>
@@ -69,6 +69,7 @@ import FixtureControl from '@/models/FixtureControl';
 import { FixtureControlType } from '@/models/FixtureControl';
 import { useDmxStore } from '@/stores/dmx';
 import { computed, ref } from 'vue';
+import { mdiHelpCircleOutline } from '@mdi/js';
 
 const store = useDmxStore();
 

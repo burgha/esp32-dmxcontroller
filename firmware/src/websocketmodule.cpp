@@ -40,8 +40,8 @@ void WebsocketModule::handleWsEvent(char *payload, size_t len)
                     Serial.print(channel);
                     Serial.print(", ");
                     Serial.println(last.toInt());
-                    this->dmxModule->setData(channel, last.toInt());
                 }
+                this->dmxModule->setData(channel, last.toInt());
                 last = "";
                 channel++;
             }
@@ -50,14 +50,15 @@ void WebsocketModule::handleWsEvent(char *payload, size_t len)
     else if (strcmp(event, "settings") == 0)
     {
         String settings = doc["data"].as<String>();
-        bool stateBefore = this->dmxModule->getOutputState();
-        this->dmxModule->disableOutput();
-        delay(100);
         File file = SPIFFS.open("/settings.json", "w");
         file.print(settings);
         file.close();
         delay(100);
-        if (stateBefore)
+    }
+    else if (strcmp(event, "dmxState") == 0)
+    {
+        boolean state = doc["data"].as<boolean>();
+        if (state)
         {
             this->dmxModule->enableOutput();
         }
@@ -90,9 +91,7 @@ void WebsocketModule::handleWsMessage(void *arg, uint8_t *data, size_t len)
             wsBufferLength = 0;
             handleWsEvent(result, wsBufferLength);
         }
-    }
-    else
-    {
+    } else {
         // message is comprised of multiple frames or the frame is split into multiple packets
         if ((info->index + len) == info->len)
         {

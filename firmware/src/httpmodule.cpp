@@ -11,18 +11,9 @@ HttpModule::HttpModule(WebsocketModule websocketModule, DmxModule* dmxModule)
 
     server->on("/api/settings", HTTP_GET, [&](AsyncWebServerRequest *request) {
         Serial.println("-> Settings");
-        bool stateBefore = dmxModule->getOutputState();
-        dmxModule->disableOutput();
-        delay(100);
         File file = SPIFFS.open("/settings.json", "r");
         String data = file.readString();
         file.close();
-        delay(100);
-        if (stateBefore) {
-        dmxModule->enableOutput();
-        } else {
-        dmxModule->disableOutput();
-        }
         if (debug) {
         Serial.println(data);
         }
@@ -41,8 +32,6 @@ HttpModule::HttpModule(WebsocketModule websocketModule, DmxModule* dmxModule)
         return;
         }
 
-        bool stateBefore = dmxModule->getOutputState();
-        dmxModule->disableOutput();
         delay(100);
 
         File file = SPIFFS.open("/settings.json", "w");
@@ -55,27 +44,18 @@ HttpModule::HttpModule(WebsocketModule websocketModule, DmxModule* dmxModule)
         file.close();
         Serial.println();
         request->send(200);
-        delay(100);
-            if (stateBefore) {
-        dmxModule->enableOutput();
-        } else {
-        dmxModule->disableOutput();
-        } 
     });
 
     server->on("/api/enable", HTTP_POST, [&](AsyncWebServerRequest *request) {
-        Serial.println("Enabling DMX");
         dmxModule->enableOutput();
-        request->send(200); });
+        request->send(200); 
+    });
 
-        server->on("/api/disable", HTTP_POST, [&](AsyncWebServerRequest *request)
-                {
-        Serial.println("Disabling DMX");
+    server->on("/api/disable", HTTP_POST, [&](AsyncWebServerRequest *request) {
         dmxModule->disableOutput();
         request->send(200); });
 
-        server->on("/api/dmx", HTTP_GET, [&](AsyncWebServerRequest *request)
-                {
+    server->on("/api/dmx", HTTP_GET, [&](AsyncWebServerRequest *request) {
         Serial.println("<- DMX");
         if (request->hasParam("channel")) {
         AsyncWebParameter* p = request->getParam("channel");
@@ -99,38 +79,38 @@ HttpModule::HttpModule(WebsocketModule websocketModule, DmxModule* dmxModule)
         Serial.println("-> DMX");
         int params = request->params();
         for(int i=0;i<params;i++){
-        AsyncWebParameter* p = request->getParam(i);
-        uint16_t channel = p->name().toInt();
-        uint8_t value = p->value().toInt();
+            AsyncWebParameter* p = request->getParam(i);
+            uint16_t channel = p->name().toInt();
+            uint8_t value = p->value().toInt();
 
-        if (this->dmxModule->dmxData[channel] != value && debug) {
-            Serial.print("Write DMX: ");
-            Serial.print(channel);
-            Serial.print(", ");
-            Serial.println(value);
+            if (this->dmxModule->dmxData[channel] != value && debug) {
+                Serial.print("Write DMX: ");
+                Serial.print(channel);
+                Serial.print(", ");
+                Serial.println(value);
+            }
+            this->dmxModule->dmxData[channel] = value;
         }
-        this->dmxModule->dmxData[channel] = value;
-        }
 
-        request->send(200); });
+        request->send(200);
+    });
 
-        server->on("/api/clearSettings", HTTP_POST, [&](AsyncWebServerRequest *request)
-                {
+    server->on("/api/clearSettings", HTTP_POST, [&](AsyncWebServerRequest *request) {
         Serial.println("Clearing Settings");
         SPIFFS.remove("/settings.json");
-        request->send(200); });
+        request->send(200);
+    });
 
-        server->on("/api/reboot", HTTP_POST, [&](AsyncWebServerRequest *request)
-                {
+    server->on("/api/reboot", HTTP_POST, [&](AsyncWebServerRequest *request) {
         Serial.println("Rebooting");
         request->send(200);
-        ESP.restart(); });
+        ESP.restart();
+    });
 
-        DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
-        DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+    DefaultHeaders::Instance().addHeader("Access-Control-Allow-Headers", "*");
 
-        server->onNotFound([&](AsyncWebServerRequest *request)
-                        {
+    server->onNotFound([&](AsyncWebServerRequest *request) {
         if (request->method() == HTTP_OPTIONS) {
             request->send(200);
             return;
