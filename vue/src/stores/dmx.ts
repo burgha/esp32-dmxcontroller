@@ -126,7 +126,11 @@ export const useDmxStore = defineStore('dmx', {
         },
         sendDMXState() {
             if (this.config.useWebsockets) {
+<<<<<<< HEAD
                 if (!WSService.getInstance().send('dmxState', this.dmxEnabled)) {
+=======
+                if(!WSService.getInstance().send('dmxState', this.dmxEnabled)) {
+>>>>>>> 0f0757d776f464ef63ca7703068f06bebd9e7b54
                     //Fallback HTTP
                     sendDMXStateHttp(this);
                 }
@@ -167,8 +171,73 @@ export const useDmxStore = defineStore('dmx', {
                 }
             }
             
+<<<<<<< HEAD
             return JSON.stringify(this.$state, replacer);
         },
+=======
+            // Compression
+            // compressionMap.forEach((val: string, key: string) => {
+            //     json = json.replaceAll(key, val);
+            // });
+            return json;
+        },
+        importObjectIntoStore(data: any) {
+            // Decompression
+            // data = JSON.stringify(data);
+            // compressionMap.forEach((val: string, key: string) => {
+            //     data = data.replaceAll(val, key);
+            // });
+            // data = JSON.parse(data);
+        
+            const scenes: Scene[] = [];
+            data.scenes?.forEach((e: any) => {
+                scenes.push(new Scene(e._name));
+            });
+            this.setScenes(scenes);
+        
+            const fixtures: Fixture[] = [];
+            data.fixtures?.forEach((e: any) => {
+                const sceneConfig: Map<Scene, DMXCommand[]> = new Map();
+                e._sceneConfig?.forEach((c: any) => {
+                    const scene = this.scenes.find(s => s.name === c._scene);
+                    if (scene === undefined) {
+                        return;
+                    }
+                    const commands: DMXCommand[] = [];
+                    c._commands?.forEach((command: any) => {
+                        commands.push(new DMXCommand(command._channel, command._value));
+                    });
+                    sceneConfig.set(scene as Scene, commands);
+                });
+                const controls: FixtureControl[] = [];
+                e._controls?.forEach((control: any) => {
+                    controls.push(new FixtureControl(control._name, control._type, control._config));
+                });
+                fixtures.push(new Fixture(e._name, e._address, e._numChannels, sceneConfig, controls));
+            });
+            this.setFixtures(fixtures);
+        
+            const groups: Group[] = [];
+            data.groups?.forEach((e: any) => {
+                const members: Fixture[] = [];
+                e._members.forEach((m: any) => {
+                    const fixture = this.fixtures.find(f => f.name === m._name);
+                    if (fixture === undefined) {
+                        return;
+                    }
+                    members.push(fixture as Fixture);
+                });
+                groups.push(new Group(e._name, members));
+            });
+            this.setGroups(groups);
+        
+            const config = new Config();
+            config.wifiCredentials = new WifiCredentials(data.config._wifiCredentials._ssid, data.config._wifiCredentials._password);
+            config.useWebsockets = data.config._useWebsockets;
+            config.startupScene = data.config._startupScene;
+            this.setConfig(config);
+        }
+>>>>>>> 0f0757d776f464ef63ca7703068f06bebd9e7b54
     },
 });
 

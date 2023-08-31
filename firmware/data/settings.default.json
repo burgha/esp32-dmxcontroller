@@ -1,0 +1,15 @@
+{
+  "scenes": [],
+  "groups": [],
+  "fixtures": [],
+  "config": {
+    "_wifiMode": 0,
+    "_apSSID": "ESP32-DMX",
+    "_wifiCredentials": {
+      "_ssid": "",
+      "_password": ""
+    },
+    "_useWebsockets": true,
+    "_startupScene": null
+  }
+}
