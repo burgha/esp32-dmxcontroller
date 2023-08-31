@@ -18,13 +18,10 @@
       <v-btn x-large to="/">
         <span>Home</span>
         <v-icon :icon="mdiHome"></v-icon>
-<<<<<<< HEAD
       </v-btn>
       <v-btn x-large to="/groups">
         <span>Groups</span>
         <v-icon :icon="mdiCog"></v-icon>
-=======
->>>>>>> 0f0757d776f464ef63ca7703068f06bebd9e7b54
       </v-btn>
       <v-btn x-large to="/settings">
         <span>Settings</span>
