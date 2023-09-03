@@ -32,7 +32,7 @@
                                     </v-col>
                                     <v-col cols="4">
                                         <v-btn
-                                            @click="deleteCommandFromFixtureSceneConfig(fixture as Fixture, editingScene as Scene, fixture.sceneConfig.get(formScene.name)!.indexOf(command))">
+                                            @click="deleteCommandFromFixtureSceneConfig(fixture as Fixture, editingScene as Scene, fixture.sceneConfig.get(editingScene.name)!.indexOf(command))">
                                             Delete Command
                                         </v-btn>
                                     </v-col>

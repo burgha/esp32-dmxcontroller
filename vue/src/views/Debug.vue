@@ -37,7 +37,7 @@ import { onMounted, ref } from 'vue';
 
 const store = useDmxStore();
 let selectedFixture = ref<Fixture | null>(null);
-let selectedFile = ref<File[] | null>(null);
+let selectedFile = ref<File[] | undefined>();
 
 onMounted(() => {
     store.getDMXData();
@@ -78,7 +78,7 @@ function importSettings(): void {
         reader.readAsText(selectedFile.value[0], 'UTF-8');
         reader.onload = (evt) => {
             const json = evt.target?.result?.toString() ?? '';
-            store.importObjectIntoStore(JSON.parse(json));
+            store.importJson(json);
             store.persistState();
         }
         reader.onerror = function () { }

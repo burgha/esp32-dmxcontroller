@@ -41,6 +41,18 @@ export const useDmxStore = defineStore('dmx', {
             persistStateDebouncedHandler();
         },
         loadSettings(): Promise<void> {
+            return new Promise((resolve, reject) => {
+                fetch(import.meta.env.VITE_APP_API_URL + "/settings").then(res => res.text()).then((text) => {
+                    const data = this.importJson(text);
+                    console.log("Loaded Settings", data);
+
+                    resolve();
+                }).catch(() => {
+                    reject();
+                });
+            });
+        },
+        importJson(json: string): any {
             function deserializeFixtureControl(x: any) {
                 return new FixtureControl(x._name, x._type, x._config);
             }
@@ -78,36 +90,28 @@ export const useDmxStore = defineStore('dmx', {
                 return value;
             }
 
-            return new Promise((resolve, reject) => {
-                fetch(import.meta.env.VITE_APP_API_URL + "/settings").then(res => res.text()).then((text) => {
-                    const data = JSON.parse(text, reviver);
-                    
-                    data.scenes = data.scenes?.map((x: any) => deserializeScene(x)) ?? [];
-                    data.fixtures = data.fixtures?.map((x: any) => deserializeFixture(x)) ?? [];
-                    data.groups = data.groups?.map((x: any) => deserializeGroup(x, data.fixtures)) ?? [];
-                    data.animations = data.animations?.map((x: any) => deserializeAnimation(x)) ?? [];
-                    
-                    const map = new Map();
-                    data.activeScene?.forEach((value: DMXControllable, key: Scene) => {
-                        if (!key || !value) {
-                            return;
-                        }
-                        key = [...data.fixtures, ...data.groups].find((c: Fixture | Group) => c.name === (key as any)._name);
-                        value = data.scenes.find((s: Scene) => s.name === (value as any)._name);
-                        map.set(key, value);
-                    });
-                    data.activeScene = map;
+            const data = JSON.parse(json, reviver);
 
-                    data.dmxEnabled = true; // Unabhängig von Settings nach boot immer aktiv
+            data.scenes = data.scenes?.map((x: any) => deserializeScene(x)) ?? [];
+            data.fixtures = data.fixtures?.map((x: any) => deserializeFixture(x)) ?? [];
+            data.groups = data.groups?.map((x: any) => deserializeGroup(x, data.fixtures)) ?? [];
+            data.animations = data.animations?.map((x: any) => deserializeAnimation(x)) ?? [];
 
-                    this.$patch(data);
-                    console.log("Loaded Settings", data);
-                    
-                    resolve();
-                }).catch(() => {
-                    reject();
-                });
+            const map = new Map();
+            data.activeScene?.forEach((value: DMXControllable, key: Scene) => {
+                if (!key || !value) {
+                    return;
+                }
+                key = [...data.fixtures, ...data.groups].find((c: Fixture | Group) => c.name === (key as any)._name);
+                value = data.scenes.find((s: Scene) => s.name === (value as any)._name);
+                map.set(key, value);
             });
+            data.activeScene = map;
+
+            data.dmxEnabled = true; // Unabhängig von Settings nach boot immer aktiv
+
+            this.$patch(data);
+            return data;
         },
         sendDMXData() {
             if (this.config.useWebsockets) {
@@ -169,7 +173,7 @@ export const useDmxStore = defineStore('dmx', {
                     return value;
                 }
             }
-            
+
             return JSON.stringify(this.$state, replacer);
         },
     },
