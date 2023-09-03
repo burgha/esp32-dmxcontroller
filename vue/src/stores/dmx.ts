@@ -89,6 +89,9 @@ export const useDmxStore = defineStore('dmx', {
                     
                     const map = new Map();
                     data.activeScene?.forEach((value: DMXControllable, key: Scene) => {
+                        if (!key || !value) {
+                            return;
+                        }
                         key = [...data.fixtures, ...data.groups].find((c: Fixture | Group) => c.name === (key as any)._name);
                         value = data.scenes.find((s: Scene) => s.name === (value as any)._name);
                         map.set(key, value);

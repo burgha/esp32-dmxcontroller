@@ -1,6 +1,6 @@
 <template>
     <div class="switch">
-        <v-switch :model-value="state" @update:modelValue="onChange($event)" />
+        <v-switch :model-value="state" @update:modelValue="onChange($event as unknown as boolean)" />
     </div>
 </template>
 

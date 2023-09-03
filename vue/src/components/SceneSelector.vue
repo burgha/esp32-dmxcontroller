@@ -11,12 +11,15 @@ import Button from '@/components/Button.vue'
 import type DMXControllable from '@/models/DMXControllable';
 import Scene from '@/models/Scene';
 
-
 const store = useDmxStore();
 const props = defineProps<{
     target: DMXControllable,
     scenes: Scene[] | undefined;
 }>();
+
+setTimeout(() => {
+    store.activeScene.get(props.target);
+}, 1000);
 
 function changeScene(newScene: Scene): void {
     props.target?.activateScene(newScene);

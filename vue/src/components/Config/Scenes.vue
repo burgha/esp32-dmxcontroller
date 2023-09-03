@@ -1,50 +1,55 @@
 <template>
-    <div class="scenes">
-        <v-sheet class="ma-4 pa-4" elevation="2">
-            <h2>Scenes</h2>
-            <v-text-field v-model="formScene.name" placeholder="Name" />
-
-            <div v-if="editing">
-                <div v-for="fixture in store.fixtures" :key="fixture.name" class="my-5">
-                    <div class="d-flex align-center justify-center">
-                        <h4>{{ fixture.name }}</h4>
-                        <v-btn v-if="fixture.sceneConfig.get(formScene.name)" click
-                            @click="copyCommands(fixture as Fixture, formScene as Scene)"><v-icon
-                                :icon="mdiContentCopy"></v-icon></v-btn>
-                        <v-btn icon @click="pasteCommands(fixture as Fixture, formScene as Scene)"><v-icon
-                                :icon="mdiContentPaste"></v-icon></v-btn>
-                    </div>
-                    <v-container v-if="fixture.sceneConfig">
-                        <v-row v-for="command in fixture.sceneConfig.get(formScene.name)"
-                            :key="command.channel">
-                            <v-col cols="4">
-                                <v-text-field v-model.number="command.channel" placeholder="Address" />
-                            </v-col>
-                            <v-col cols="4">
-                                <v-text-field v-model.number="command.value" placeholder="Value" />
-                            </v-col>
-                            <v-col cols="4">
-                                <v-btn
-                                    @click="deleteCommandFromFixtureSceneConfig(fixture as Fixture, formScene as Scene, fixture.sceneConfig.get(formScene.name)!.indexOf(command))">
-                                    Delete Command
-                                </v-btn>
-                            </v-col>
-                        </v-row>
-                    </v-container>
-                    <v-btn @click="addCommandToFixtureSceneConfig(fixture as Fixture, formScene as Scene)">Add
-                        Command</v-btn>
-                </div>
-            </div>
-            <v-btn v-if="!editing" class="ma-4" @click="add()">Add</v-btn>
-            <v-btn v-if="editing" class="ma-4" @click="save()">Save</v-btn>
-        </v-sheet>
-
-        <div v-for="scene in store.scenes" :key="scene.name" class="ma-2">
+    <div class="scenes ma-2">
+        <div v-for="scene in store.scenes" :key="scene.name">
             {{ scene.name }}
-            <v-btn class="ma-2" @click="edit(scene as Scene)">Edit</v-btn>
-            <v-btn class="ma-2" @click="remove(scene as Scene)">Delete</v-btn>
-            <v-divider v-if="store.scenes.indexOf(scene) < store.scenes.length - 1" />
+            <v-btn class="ma-2" @click="editScene(scene as Scene)">Edit</v-btn>
+            <v-btn class="ma-2" @click="deleteScene(scene as Scene)">Delete</v-btn>
         </div>
+
+        <v-btn class="mt-4" @click="createScene()">Create</v-btn>
+
+        <v-dialog v-model="sceneEditDialog" width="80%">
+            <v-card>
+                <v-card-text>
+                    <v-text-field v-model="editingScene.name" placeholder="Name" />
+                    <div v-if="editing">
+                        <div v-for="fixture in store.fixtures" :key="fixture.name" class="my-5">
+                            <div class="d-flex align-center justify-center">
+                                <h4>{{ fixture.name }}</h4>
+                                <v-btn v-if="fixture.sceneConfig.get(editingScene.name)" click
+                                    @click="copyCommands(fixture as Fixture, editingScene as Scene)"><v-icon
+                                        :icon="mdiContentCopy"></v-icon></v-btn>
+                                <v-btn icon @click="pasteCommands(fixture as Fixture, editingScene as Scene)"><v-icon
+                                        :icon="mdiContentPaste"></v-icon></v-btn>
+                            </div>
+                            <v-container v-if="fixture.sceneConfig">
+                                <v-row v-for="command in fixture.sceneConfig.get(editingScene.name)" :key="command.channel">
+                                    <v-col cols="4">
+                                        <v-text-field v-model.number="command.channel" placeholder="Address" />
+                                    </v-col>
+                                    <v-col cols="4">
+                                        <v-text-field v-model.number="command.value" placeholder="Value" />
+                                    </v-col>
+                                    <v-col cols="4">
+                                        <v-btn
+                                            @click="deleteCommandFromFixtureSceneConfig(fixture as Fixture, editingScene as Scene, fixture.sceneConfig.get(formScene.name)!.indexOf(command))">
+                                            Delete Command
+                                        </v-btn>
+                                    </v-col>
+                                </v-row>
+                            </v-container>
+                            <v-btn @click="addCommandToFixtureSceneConfig(fixture as Fixture, editingScene as Scene)">Add
+                                Command</v-btn>
+                        </div>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn v-if="!editing" @click="addScene()">Add</v-btn>
+                    <v-btn v-if="editing" @click="saveScene()">Save</v-btn>
+                    <v-btn v-if="editing" @click="deleteScene(editingScene as Scene)">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -58,9 +63,12 @@ import { mdiContentCopy, mdiContentPaste } from '@mdi/js';
 
 const store = useDmxStore();
 
-let formScene = ref(new Scene(''));
+let editingScene = ref(new Scene(''));
 let editing = ref(false);
+let sceneEditDialog = ref(false);
+
 let commandClipboard: DMXCommand[] = [];
+
 
 function addCommandToFixtureSceneConfig(fixture: Fixture, scene: Scene): void {
     if (!fixture.sceneConfig.has(scene.name)) {
@@ -93,30 +101,35 @@ function pasteCommands(fixture: Fixture, scene: Scene): void {
     instance?.proxy?.$forceUpdate();
 }
 
-function add(): void {
-    if (formScene.value.name === '') {
+function createScene(): void {
+    editingScene.value = new Scene("");
+    editing.value = false;
+    sceneEditDialog.value = true;
+}
+
+function addScene(): void {
+    if (editingScene.value.name === '') {
         return;
     }
-    store.scenes.push(formScene.value);
-    formScene.value = new Scene('');
+    sceneEditDialog.value = false;
+    store.scenes.push(editingScene.value);
     store.persistState();
 }
 
-function edit(scene: Scene): void {
-    formScene.value = scene;
+function editScene(scene: Scene): void {
     editing.value = true;
+    editingScene.value = scene;
+    sceneEditDialog.value = true;
 }
 
-function save(): void {
-    formScene.value = new Scene('');
-    editing.value = false;
-
+function saveScene(): void {
+    sceneEditDialog.value = false;
     store.persistState();
 }
 
-function remove(scene: Scene): void {
+function deleteScene(scene: Scene): void {
     store.scenes.splice(store.scenes.indexOf(scene), 1);
-    formScene.value = new Scene('');
+    sceneEditDialog.value = false;
     store.persistState();
 }
 </script>
