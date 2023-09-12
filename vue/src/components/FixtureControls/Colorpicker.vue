@@ -9,6 +9,7 @@ import Fixture from '@/models/Fixture';
 import DMXCommand from '@/models/DMXCommand';
 import { computed, onMounted } from 'vue';
 import { useDmxStore } from '@/stores/dmx';
+import type { FixtureControlValueChangedEventArgs } from '@/models/FixtureControlValueChangedEventArgs';
 
 const store = useDmxStore();
 const props = defineProps<{
@@ -16,6 +17,9 @@ const props = defineProps<{
     channels: number[] | undefined
 }>();
 
+const emit = defineEmits<{
+    valueChanged: [args: FixtureControlValueChangedEventArgs]
+}>();
 const color = computed(() => {
     if (!props.channels) {
         return "#000"
@@ -53,11 +57,15 @@ function onUpdateColor(val: any): void {
     if (props.channels === undefined || props.fixture === undefined) {
         return;
     }
-    props.fixture.applyCommands([
+    const commands = [
         new DMXCommand(props.channels[0], val[0]),
         new DMXCommand(props.channels[1], val[1]),
         new DMXCommand(props.channels[2], val[2]),
-    ]);
+    ];
+    props.fixture.applyCommands(commands);
+    emit('valueChanged', {
+        commands: commands
+    });
     debouncedUpdate();
 }
 </script>

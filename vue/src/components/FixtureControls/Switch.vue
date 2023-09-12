@@ -9,6 +9,7 @@ import Fixture from '@/models/Fixture';
 import DMXCommand from '@/models/DMXCommand';
 import { useDmxStore } from '@/stores/dmx';
 import { computed } from 'vue';
+import type { FixtureControlValueChangedEventArgs } from '@/models/FixtureControlValueChangedEventArgs';
 
 const store = useDmxStore();
 const props = defineProps<{
@@ -16,6 +17,10 @@ const props = defineProps<{
     channel: number | undefined,
     onVal: number | undefined,
     offVal: number | undefined
+}>();
+
+const emit = defineEmits<{
+    valueChanged: [args: FixtureControlValueChangedEventArgs]
 }>();
 
 const state = computed(() => {
@@ -29,9 +34,13 @@ function onChange(val: boolean): void {
     if (props.channel === undefined || props.onVal === undefined || props.offVal === undefined || props.fixture === undefined) {
         return;
     }
-    props.fixture.applyCommands([
+    const commands = [
         new DMXCommand(props.channel, val ? props.onVal : props.offVal),
-    ]);
+    ];
+    props.fixture.applyCommands(commands);
+    emit('valueChanged', {
+        commands: commands
+    });
     store.sendDMXData();
 }
 </script>

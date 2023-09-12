@@ -1,7 +1,7 @@
 <template>
     <div class="fixtures pa-2">
         <div v-for="fixture in store.fixtures" :key="fixture.name">
-            {{ fixture.name }} ({{ fixture.address }} - {{ Number(fixture.address) + Number(fixture.numChannels) }})
+            {{ fixture.name }} ({{ fixture.address }} - {{ Number(fixture.address) + Number(fixture.numChannels) - 1 }})
             <v-btn class="ma-2" @click="editFixture(fixture as Fixture)">Edit</v-btn>
             <v-btn class="ma-2" @click="deleteFixture(fixture as Fixture)">Delete</v-btn>
         </div>

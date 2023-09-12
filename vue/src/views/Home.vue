@@ -18,20 +18,7 @@
                 <v-expansion-panel-text>
                     <div v-for="control in fixture.controls" :key="control.name" class="ma-4 text-left">
                         <h5 class="mb-4">{{ control.name }}</h5>
-                        <div v-if="control.type === FixtureControlType.Slider">
-                            <SliderFixtureControl :fixture="(fixture as Fixture)"
-                                :channels="control.config.trim().split(',').map(e => parseInt(e))" />
-                        </div>
-                        <div v-if="control.type === FixtureControlType.Colorpicker">
-                            <ColorpickerFixtureControl :fixture="(fixture as Fixture)"
-                                :channels="control.config.trim().split(',').map(e => parseInt(e))" />
-                        </div>
-                        <div v-if="control.type === FixtureControlType.Switch">
-                            <SwitchFixtureControl :fixture="(fixture as Fixture)"
-                                :channel="parseInt(control.config.trim().split(',')[0])"
-                                :on-val="parseInt(control.config.trim().split(',')[1])"
-                                :off-val="parseInt(control.config.trim().split(',')[2])" />
-                        </div>
+                        <FixtureController :target="(fixture as Fixture)" :control="(control as FixtureControl)"></FixtureController>
                     </div>
                 </v-expansion-panel-text>
             </v-expansion-panel>
@@ -40,15 +27,13 @@
 </template>
 
 <script setup lang="ts">
-import { FixtureControlType } from '@/models/FixtureControl';
 import SceneSelector from '@/components/SceneSelector.vue';
-import SliderFixtureControl from '@/components/FixtureControls/Slider.vue';
-import ColorpickerFixtureControl from '@/components/FixtureControls/Colorpicker.vue';
-import SwitchFixtureControl from '@/components/FixtureControls/Switch.vue';
+import FixtureController from '@/components/FixtureController.vue';
 import { useDmxStore } from '@/stores/dmx';
-import type Fixture from '@/models/Fixture';
 import type Scene from '@/models/Scene';
 import Group from '@/models/Group';
+import type Fixture from '@/models/Fixture';
+import type FixtureControl from '@/models/FixtureControl';
 
 const store = useDmxStore();
 
