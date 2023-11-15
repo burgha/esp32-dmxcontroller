@@ -88,7 +88,7 @@ function isFixtureInGroup(group: Group, fixture: Fixture): boolean {
     return group.members.find(x => x.name === fixture.name) !== undefined;
 }
 
-function setEditingMembershipValue(v: boolean, f: Fixture) {
+function setEditingMembershipValue(v: boolean | null, f: Fixture) {
     if (v) {
         editingGroupMembers.value.push(f);
     } else {
