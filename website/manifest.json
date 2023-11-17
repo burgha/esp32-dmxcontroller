@@ -1,0 +1,13 @@
+{
+    "name": "ESP32-DMXController",
+    "version": "2023.11.0",
+    "new_install_prompt_erase": false,
+    "builds": [
+      {
+        "chipFamily": "ESP32",
+        "parts": [
+            { "path": "https://github.com/burgha/esp32-dmxcontroller/releases/latest/download/esp32-dmxcontroller.bin", "offset": 0 }
+        ]
+      }
+    ]
+  }
