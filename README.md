@@ -21,6 +21,7 @@ Fixture Setup
 ![](images/fixtures.png)
 
 ### Installation
+[Web based flasher](https://burgha.github.io/esp32-dmxcontroller/)
 
 ## Hardware
 ### Components
